@@ -48,6 +48,16 @@ This repository is organized as a monorepo containing implementations for four p
 
 **Note**: These submodules may require different environments or dependencies. Please refer to the `README.md` in each subdirectory for setup and usage instructions.
 
+## 🎀 Pretrained Model
+
+Please refer to the [huggingface page](https://huggingface.co/papers/2507.16782) to see the pretrained model of [YOLOv5](https://huggingface.co/collections/DFQ-Dojo/yolov5-dfq-models-68a090a174a34dcb4c86c075), [YOLO11](https://huggingface.co/collections/DFQ-Dojo/yolo11-dfq-models-68a5982368c66014ff20ed3f) and [ViT](https://huggingface.co/collections/DFQ-Dojo/swin-transformer-dfq-models-68bda92e4795f9294ac3b2eb) series.
+
+## 🎈 TODO
+
+1. Release pretrained weights of Resnet based masked rcnn models.
+2. Release instructions of the evaluation of models.
+3. Convert model to a universal and ergomatic format.
+
 ## 📜 License
 
 This project includes code from [Ultralytics](https://github.com/ultralytics/ultralytics) and is therefore distributed under the **AGPL license** in compliance with their licensing terms.
