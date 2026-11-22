@@ -70,7 +70,7 @@ explicit = true
 [tool.ruff]
 line-length = 100
 # The old per-detector projects; each is deleted when its replacement lands in src/dfq.
-extend-exclude = ["resnet", "vit", "yolo11", "yolov5", "src/dfq/vendor"]
+extend-exclude = ["yolo11", "yolov5"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -80,7 +80,6 @@ python_version = "3.14"
 files = ["src", "tests", "scripts"]
 explicit_package_bases = true
 mypy_path = "src"
-exclude = ["src/dfq/vendor/"]
 
 [[tool.mypy.overrides]]
 module = ["torchvision.*", "pycocotools.*", "scipy.*", "cv2.*", "yaml.*", "pandas.*"]
@@ -90,4 +89,4 @@ ignore_missing_imports = true
 venvPath = "."
 venv = ".venv"
 include = ["src", "tests", "scripts"]
-exclude = ["src/dfq/vendor", "resnet", "vit", "yolo11", "yolov5"]
+exclude = ["yolo11", "yolov5"]

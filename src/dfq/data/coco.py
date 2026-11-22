@@ -8,6 +8,7 @@ that padding normalizes to zero, as MMDetection's `Normalize` then `Pad` did.
 
 import contextlib
 import io
+import math
 import random
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -27,12 +28,15 @@ from dfq.detection.coco import coco_classes
 
 @dataclass(frozen=True)
 class ImageInfo:
-    """Where an image came from: its COCO id, original size, and the scale it was resized by."""
+    """Where an image came from: its COCO id, original size, the scale it was resized by, and
+    the padding added on its left and top (letterboxing)."""
 
     image_id: int
     height: int
     width: int
     scale: float = 1.0
+    left: float = 0.0
+    top: float = 0.0
 
 
 Sample = tuple[Tensor, Targets, ImageInfo]
@@ -112,6 +116,34 @@ def resize_keep_ratio(sample: Sample, short: int, long: int) -> Sample:
     scaled = Targets(boxes=targets.boxes * factors, labels=targets.labels, masks=masks)
     resized_info = ImageInfo(info.image_id, info.height, info.width, scale=scale)
     return resized, scaled, resized_info
+
+
+def letterbox(sample: Sample, size: int, stride: int = 32, fill: float = 114 / 255) -> Sample:
+    """Fit the image into `size x size` keeping its ratio, then pad it evenly on both sides up to
+    a multiple of `stride`, as YOLO validation does for one image per batch."""
+    image, targets, info = sample
+    height, width = image.shape[1:]
+    scale = min(size / height, size / width)
+    new_height = round(height * scale)
+    new_width = round(width * scale)
+    resized = F.interpolate(
+        image[None], size=(new_height, new_width), mode="bilinear", align_corners=False
+    )[0]
+    padded_height = math.ceil(new_height / stride) * stride
+    padded_width = math.ceil(new_width / stride) * stride
+    top = (padded_height - new_height) / 2
+    left = (padded_width - new_width) / 2
+    canvas = torch.full((3, padded_height, padded_width), fill)
+    row, column = round(top - 0.1), round(left - 0.1)
+    canvas[:, row : row + new_height, column : column + new_width] = resized
+    shift = torch.tensor([column, row, column, row], dtype=torch.float32)
+    boxes = targets.boxes * scale + shift
+    moved = Targets(boxes=boxes, labels=targets.labels)
+    return (
+        canvas,
+        moved,
+        ImageInfo(info.image_id, info.height, info.width, scale, float(column), float(row)),
+    )
 
 
 def flip_horizontally(sample: Sample, probability: float) -> Sample:

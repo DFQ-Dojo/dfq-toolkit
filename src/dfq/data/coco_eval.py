@@ -2,9 +2,9 @@
 
 Only the evaluated images count, so a validation subset is scored against its own ground truth.
 
-Detections are mapped back to the original image: boxes are divided by the resize scale and
-clipped, and mask probabilities are cropped to the resized image, resized to the original size
-and thresholded at 0.5.
+Detections are mapped back to the original image: boxes lose the letterbox padding, are divided
+by the resize scale and clipped, and mask probabilities are cropped to the resized image, resized
+to the original size and thresholded at 0.5.
 """
 
 import contextlib
@@ -40,7 +40,8 @@ def original_masks(masks: Tensor, info: ImageInfo) -> np.ndarray:
 
 def image_results(detections: Detections, info: ImageInfo, with_masks: bool) -> list[dict]:
     coco_id = [item.coco_id for item in coco_classes()]
-    boxes = detections.boxes.detach().cpu() / info.scale
+    offset = torch.tensor([info.left, info.top, info.left, info.top])
+    boxes = (detections.boxes.detach().cpu() - offset) / info.scale
     boxes[:, 0::2] = boxes[:, 0::2].clamp(0, info.width)
     boxes[:, 1::2] = boxes[:, 1::2].clamp(0, info.height)
     widths = boxes[:, 2] - boxes[:, 0]

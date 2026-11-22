@@ -4,7 +4,7 @@ from pathlib import Path
 
 import torch
 
-from dfq.data.coco import CocoInstances, pad_batch, resize_keep_ratio
+from dfq.data.coco import CocoInstances, letterbox, pad_batch, resize_keep_ratio
 from dfq.data.coco_eval import evaluate_coco
 from dfq.data.labels import (
     coco_labels,
@@ -88,6 +88,18 @@ class EvaluationTest(unittest.TestCase):
             detector.answers = batch[1]
             stats = evaluate_coco(detector, [batch], dataset.coco, with_masks=False)  # type: ignore[arg-type]
         self.assertAlmostEqual(stats["bbox_mAP"], 1.0, places=6)
+
+    def test_letterboxed_detections_map_back(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            images, annotations = write_coco(Path(directory))
+            dataset = CocoInstances(images, annotations, masks=False, skip_empty=False)
+            samples = [letterbox(dataset[i], size=128) for i in range(2)]
+            batch = pad_batch(samples, fill=(0.0, 0.0, 0.0))
+            detector = PerfectDetector()
+            detector.answers = batch[1]
+            stats = evaluate_coco(detector, [batch], dataset.coco, with_masks=False)  # type: ignore[arg-type]
+        self.assertGreater(samples[0][2].top, 0.0)
+        self.assertGreater(stats["bbox_mAP"], 0.95)
 
     def test_only_evaluated_images_count(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

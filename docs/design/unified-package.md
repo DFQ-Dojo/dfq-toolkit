@@ -35,7 +35,7 @@ One installable package, `dfq`, under `src/dfq/`, with one `pyproject.toml`, man
 - **Decision:** vendor the parts of Ultralytics (8.3.53, the version the YOLO11 results used),
   YOLOv5 and timm that the pipeline imports, under `dfq/vendor/`, each with its licence and source
   version. Delete the rest, such as export, benchmarks, hub, segmentation and classification.
-  Vendored code is frozen: we fix bugs in it, but do not restyle it.
+  Vendored code is our code: it follows the same style, typing and checks as the rest of `dfq`.
 - **Decision:** checkpoints become plain state dicts. Ultralytics and YOLOv5 save pickled modules,
   which name their import paths (`ultralytics.nn.tasks`, `models.yolo`). A remapping unpickler loads
   them into the vendored classes, and `scripts/convert_checkpoint.py` saves them again as a state
@@ -95,8 +95,9 @@ about 1000 changed lines, not counting moved files.
 
 ## Limitations
 
-- The torchvision Mask R-CNN differs from MMDetection's in small ways: image resizing, L1 against
-  smooth L1 box losses, and how boxes are rounded. Converted Swin and DeiT checkpoints therefore give
+- The torchvision Mask R-CNN differs from MMDetection's in small ways: L1 against smooth L1 box
+  losses, rounded anchor corners, and low-quality matches in the box head. Pooling uses
+  MMDetection's aligned RoIAlign. Converted Swin and DeiT checkpoints therefore give
   slightly different COCO mAP. The released weights must be evaluated again on a GPU, and the new
   numbers recorded in `docs/research/`.
 - The unified training loop replaces the Ultralytics and MMDetection trainers. It reproduces their
