@@ -1,8 +1,9 @@
 """The optimizer, its parameter groups, and the learning-rate and momentum schedule.
 
 Parameters fall into three groups: weights with weight decay; normalization weights and weights
-whose name matches a `no_decay` pattern, without decay; and biases, without decay. YOLO warms the
-bias group up from a high learning rate, so the bias group comes first.
+whose name matches a `no_decay` pattern, without decay; and biases, without decay. With
+`decay_biases_and_norms`, biases and normalization weights decay too, as plain SGD does. YOLO
+warms the bias group up from a high learning rate, so the bias group comes first.
 
 The learning rate of iteration `i` in epoch `e` is `lr * epoch_factor(e)`. During the first
 `warmup.iterations` iterations it rises linearly from `start_factor * lr` (or from `bias_start_lr`
@@ -34,6 +35,7 @@ class OptimizerConfig(BaseModel):
     nesterov: bool = False
     weight_decay: float = 0.0
     no_decay: tuple[str, ...] = ()
+    decay_biases_and_norms: bool = False
 
 
 class ScheduleKind(StrEnum):
@@ -69,7 +71,7 @@ def is_norm(module: nn.Module) -> bool:
 
 
 def parameter_groups(
-    network: nn.Module, no_decay: tuple[str, ...]
+    network: nn.Module, no_decay: tuple[str, ...], decay_biases_and_norms: bool = False
 ) -> tuple[list[nn.Parameter], list[nn.Parameter], list[nn.Parameter]]:
     """Split trainable parameters into (biases, decayed weights, other weights)."""
     biases, decayed, undecayed = [], [], []
@@ -81,7 +83,7 @@ def parameter_groups(
             exempt = any(fnmatchcase(name, pattern) for pattern in no_decay)
             if parameter_name == "bias":
                 biases.append(parameter)
-            elif is_norm(module) or exempt:
+            elif exempt or (is_norm(module) and not decay_biases_and_norms):
                 undecayed.append(parameter)
             else:
                 decayed.append(parameter)
@@ -89,9 +91,12 @@ def parameter_groups(
 
 
 def build_optimizer(network: nn.Module, config: OptimizerConfig) -> torch.optim.Optimizer:
-    biases, decayed, undecayed = parameter_groups(network, config.no_decay)
+    biases, decayed, undecayed = parameter_groups(
+        network, config.no_decay, config.decay_biases_and_norms
+    )
+    bias_decay = config.weight_decay if config.decay_biases_and_norms else 0.0
     groups = [
-        {"params": biases, "weight_decay": 0.0},
+        {"params": biases, "weight_decay": bias_decay},
         {"params": decayed, "weight_decay": config.weight_decay},
         {"params": undecayed, "weight_decay": 0.0},
     ]

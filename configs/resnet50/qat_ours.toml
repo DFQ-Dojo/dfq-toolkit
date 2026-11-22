@@ -1,0 +1,39 @@
+# Stage II for ResNet-50 Mask R-CNN: 8-bit LSQ on generated images, with distillation.
+# From the old resnet/README.md (kdt4+mse, batch 32, 100 epochs) and feature_qat.py defaults
+# (SGD 0.005, momentum 0.9, decay 1e-4 on all parameters, steps at 16 and 22, patience 10, warm-up
+# over the first epoch). Two changes: the KL term now compares the RPN outputs, not post-NMS scores,
+# with the setting the Swin/DeiT runs used (one softmax over all outputs, tau 1); and the feature
+# term uses the bottleneck outputs, which the old command did not name.
+output = "outputs/resnet50/qat_ours"
+batch_size = 32
+
+[model]
+family = "resnet50"
+weights = "weights/maskrcnn_resnet50_fpn_coco.pth"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "synthetic"
+directories = ["outputs/resnet50/generated"]
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[distill]
+detection_weight = 1.0
+logit_weight = 1.0
+feature_weight = 1.0
+feature_kind = "block"
+logit_loss = { kind = "kl", tau = 1.0, softmax_over = "all_outputs" }
+
+[train]
+epochs = 100
+patience = 10
+optimizer = { name = "sgd", lr = 0.005, momentum = 0.9, weight_decay = 0.0001, decay_biases_and_norms = true }
+schedule = { kind = "step", milestones = [16, 22], gamma = 0.1 }
+warmup = { iterations = 15, start_factor = 0.001 }

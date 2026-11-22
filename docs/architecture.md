@@ -16,6 +16,9 @@ quant/        fake quantizers (LSQ, LSQ+), quantized Conv2d and Linear, the quan
     distill/    distillation losses and objective
     synthesis/  image priors, augmentation, adaptive box sampling, the generation loop
     training/   the quantization-aware training loop, optimizer schedule, weight average
+  models/       detector adapters; each implements Detector
+recipes/        connect adapters to the pipelines; only scripts import it
+scripts/        one thin script per stage
 ```
 
 `distill/`, `synthesis/` and `training/` depend on the `Detector` protocol, never on a model, and
@@ -152,3 +155,30 @@ gathered over `torchrun` processes.
 - `runs.py`: `start_run` creates a run directory and saves the resolved config as `config.json`;
   `write_records` appends records to a JSON Lines file.
 - `distributed.py`: joining a `torchrun` process group, averaging gradients.
+
+## Models (`models/`)
+
+An adapter wraps a network and implements `Detector`.
+
+- `maskrcnn/detector.py`: `MaskRCNNDetector` for any torchvision Mask R-CNN. `network_labels`
+  maps dfq's class indices to the head's labels (torchvision COCO heads use the COCO category id,
+  with 0 as background). Targets without masks get box-shaped masks. `logit_layer` is the RPN head.
+- `maskrcnn/transform.py`: the input transform without resizing, since the data pipeline resizes.
+- `maskrcnn/resnet.py`: ResNet-50 FPN from torchvision's COCO weights, with `BatchNorm2d` so the
+  BN prior can read it. Quantization covers `layer1` to `layer4`, except the last bottleneck.
+
+**To add a detector:** write its adapter in `models/`, add its family to `recipes/configs.py` and
+`recipes/families.py`, add its configs in `configs/<family>/`, and test the adapter on CPU in
+`tests/models/`.
+
+## Recipes and scripts
+
+`recipes/configs.py` holds one Pydantic record per script; `recipes/run.py` runs each stage from
+its record. A script parses `config.toml [key=value ...]`, loads the record, and calls its recipe.
+
+```text
+labels.py    LabelsConfig    -> label set (JSON Lines)
+generate.py  GenerateConfig  -> synthetic set
+qat.py       QatConfig       -> best.pt, last.pt, epochs.jsonl, result.json
+evaluate.py  EvaluateConfig  -> COCO mAP
+```

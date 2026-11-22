@@ -1,0 +1,6 @@
+# One random box per image: the start of adaptive box sampling (the old generate_one_label.py).
+source = "one_box"
+output = "outputs/labels/one_box.jsonl"
+count = 5120
+num_classes = 80
+seed = 0

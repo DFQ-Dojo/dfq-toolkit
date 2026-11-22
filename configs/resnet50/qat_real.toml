@@ -1,0 +1,33 @@
+# Baseline: 8-bit LSQ on real COCO train2017, without distillation (the old resnet/train.py).
+output = "outputs/resnet50/qat_real"
+batch_size = 32
+
+[model]
+family = "resnet50"
+weights = "weights/maskrcnn_resnet50_fpn_coco.pth"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "coco"
+images = "data/coco/train2017"
+annotations = "data/coco/annotations/instances_train2017.json"
+
+[resize]
+short_sides = [800]
+long_side = 1333
+flip = 0.5
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[train]
+epochs = 26
+patience = 10
+optimizer = { name = "sgd", lr = 0.005, momentum = 0.9, weight_decay = 0.0001, decay_biases_and_norms = true }
+schedule = { kind = "step", milestones = [16, 22], gamma = 0.1 }
+warmup = { iterations = 1000, start_factor = 0.001 }

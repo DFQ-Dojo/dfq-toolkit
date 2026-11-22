@@ -1,9 +1,12 @@
 """Run directories: one per script run, holding its config, logs and outputs."""
 
 import json
+import random
 from collections.abc import Iterable
 from pathlib import Path
 
+import numpy as np
+import torch
 from pydantic import BaseModel
 
 
@@ -23,3 +26,10 @@ def write_records(path: Path, records: Iterable[BaseModel]) -> None:
 
 def write_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2))
+
+
+def seed_everything(seed: int) -> None:
+    """Seed Python's, NumPy's and PyTorch's random number generators."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)

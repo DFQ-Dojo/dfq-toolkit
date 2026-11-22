@@ -36,17 +36,27 @@ Our contributions are threefold:
 
 ## 📁 Repository Structure
 
-This repository is organized as a monorepo containing implementations for four popular detection backbones. Each subdirectory includes code and instructions for reproducing our experiments on that architecture.
+All detectors share one Python package, `dfq`, on Python 3.14, managed by [uv](https://docs.astral.sh/uv/).
 
-| Directory | Description |
-|-----------|-------------|
-| `resnet`  | Experiments using ResNet-based Mask R-CNN |
-| `vit`     | Experiments using ViT-based (Transformer) Mask R-CNN |
-| `yolo11`  | Experiments on the YOLOv11 series |
-| `yolov5`  | Experiments on the YOLOv5 series |
-| `tools`   | Utility scripts for dataset preparation |
+| Path | Content |
+|------|---------|
+| `src/dfq/` | The package: quantization, distillation, image generation, training, detector adapters |
+| `scripts/` | One script per stage: `labels.py`, `generate.py`, `qat.py`, `evaluate.py` |
+| `configs/` | One TOML config per detector and stage |
+| `docs/` | [User manual](docs/user-manual.md), [architecture](docs/architecture.md), designs, results |
+| `tests/` | Unit tests that run on CPU |
+| `tools/` | Dataset download |
+| `vit/`, `yolo11/`, `yolov5/` | The old per-detector projects, until each moves into `dfq` |
 
-**Note**: These submodules may require different environments or dependencies. Please refer to the `README.md` in each subdirectory for setup and usage instructions.
+ResNet-50 Mask R-CNN already runs on `dfq`. The move is described in
+[`docs/design/unified-package.md`](docs/design/unified-package.md).
+
+To start, follow the [user manual](docs/user-manual.md):
+
+```bash
+uv sync --extra cu132 --extra vit --extra yolo
+uv run --no-sync python scripts/generate.py configs/resnet50/generate.toml
+```
 
 ## 🎀 Pretrained Model
 

@@ -89,6 +89,18 @@ class EvaluationTest(unittest.TestCase):
             stats = evaluate_coco(detector, [batch], dataset.coco, with_masks=False)  # type: ignore[arg-type]
         self.assertAlmostEqual(stats["bbox_mAP"], 1.0, places=6)
 
+    def test_only_evaluated_images_count(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            images, annotations = write_coco(Path(directory))
+            dataset = CocoInstances(images, annotations, masks=False, skip_empty=False, limit=1)
+            batch = pad_batch(
+                [resize_keep_ratio(dataset[0], short=160, long=200)], fill=(0.0, 0.0, 0.0)
+            )
+            detector = PerfectDetector()
+            detector.answers = batch[1]
+            stats = evaluate_coco(detector, [batch], dataset.coco, with_masks=False)  # type: ignore[arg-type]
+        self.assertAlmostEqual(stats["bbox_mAP"], 1.0, places=6)
+
 
 class SyntheticTest(unittest.TestCase):
     def test_append_and_read(self) -> None:

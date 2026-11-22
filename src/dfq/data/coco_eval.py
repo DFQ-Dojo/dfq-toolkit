@@ -1,5 +1,7 @@
 """COCO mean average precision (mAP) of a detector, with pycocotools.
 
+Only the evaluated images count, so a validation subset is scored against its own ground truth.
+
 Detections are mapped back to the original image: boxes are divided by the resize scale and
 clipped, and mask probabilities are cropped to the resized image, resized to the original size
 and thresholded at 0.5.
@@ -64,20 +66,24 @@ def image_results(detections: Detections, info: ImageInfo, with_masks: bool) -> 
     return results
 
 
-def gathered(results: list[dict]) -> list[dict]:
+def gathered[T](items: list[T]) -> list[T]:
     if not dist.is_initialized():
-        return results
-    parts: list[list[dict]] = [[] for _ in range(dist.get_world_size())]
-    dist.all_gather_object(parts, results)
-    return [result for part in parts for result in part]
+        return items
+    parts: list[list[T]] = [[] for _ in range(dist.get_world_size())]
+    dist.all_gather_object(parts, items)
+    return [item for part in parts for item in part]
 
 
-def summarize(coco: COCO, results: list[dict], iou_type: str) -> dict[str, float]:
+def summarize(
+    coco: COCO, results: list[dict], image_ids: list[int], iou_type: str
+) -> dict[str, float]:
+    """Score `results` against the ground truth of `image_ids` only."""
     if not results:
         return {f"{iou_type}_{name}": 0.0 for name in STAT_NAMES}
     with contextlib.redirect_stdout(io.StringIO()):
         predictions = coco.loadRes(results)
         evaluator = COCOeval(coco, predictions, iou_type)
+        evaluator.params.imgIds = sorted(set(image_ids))
         evaluator.evaluate()
         evaluator.accumulate()
         evaluator.summarize()
@@ -97,13 +103,16 @@ def evaluate_coco(
     device = next(detector.network.parameters()).device
     detector.network.eval()
     results: list[dict] = []
+    image_ids: list[int] = []
     with torch.no_grad():
         for images, _, infos in batches:
             detections = detector.predict(images.to(device))
             for found, info in zip(detections, infos, strict=True):
                 results.extend(image_results(found, info, with_masks))
-    everything = gathered(results)
-    stats = summarize(coco, everything, "bbox")
+                image_ids.append(info.image_id)
+    all_results = gathered(results)
+    all_ids = gathered(image_ids)
+    stats = summarize(coco, all_results, all_ids, "bbox")
     if with_masks:
-        stats.update(summarize(coco, everything, "segm"))
+        stats.update(summarize(coco, all_results, all_ids, "segm"))
     return stats

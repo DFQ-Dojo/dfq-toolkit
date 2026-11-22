@@ -1,0 +1,4 @@
+# The boxes of COCO train2017 ("real labels"), for generation from real labels.
+source = "coco"
+output = "outputs/labels/coco_train.jsonl"
+annotations = "data/coco/annotations/instances_train2017.json"

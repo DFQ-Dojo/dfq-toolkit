@@ -1,0 +1,10 @@
+# COCO val2017 box and mask mAP of the float model; set quant and checkpoint for a QAT result.
+batch_size = 1
+
+[model]
+family = "resnet50"
+weights = "weights/maskrcnn_resnet50_fpn_coco.pth"
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"

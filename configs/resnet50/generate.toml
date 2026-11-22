@@ -1,0 +1,23 @@
+# Stage I for ResNet-50 Mask R-CNN: generate images from real COCO labels.
+# From the old resnet/README.md: 500 images, batch 32, 300 iterations, clipping on; the other
+# values are the old distill_data.py defaults. The old code optimized each real image's resized
+# size; dfq uses one fixed size.
+labels = "outputs/labels/coco_train.jsonl"
+output = "outputs/resnet50/generated"
+size = [800, 800]
+batch_size = 32
+count = 500
+verify = false
+
+[model]
+family = "resnet50"
+weights = "weights/maskrcnn_resnet50_fpn_coco.pth"
+
+[generation]
+iterations = 300
+lr = 0.2
+schedule = "cosine"
+init = "normal_pixels"
+clamp = true
+latent = { mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225] }
+weights = { detection = 1.0, tv_l1 = 0.0, tv_l2 = 0.0001, batch_norm = 0.05, first_batch_norm = 0.0 }

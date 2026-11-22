@@ -31,3 +31,7 @@ TODO.md
 # uv
 .venv
 outputs
+
+# datasets and downloaded weights
+/data
+/weights
