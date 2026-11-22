@@ -1,10 +1,8 @@
-import copy
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Function
-import torch.distributed as dist
 
 
 # ********************* quantizers（量化器，量化） *********************
@@ -63,31 +61,11 @@ class FunLSQ(Function):
         bigger = (q_w > Qp).float()  # bool值转浮点值，1.0或者0.0
         between = 1.0 - smaller - bigger  # 得到位于量化区间的index
         if per_channel:
-            grad_alpha = (
-                (
-                    smaller * Qn
-                    + bigger * Qp
-                    + between * Round.apply(q_w)
-                    - between * q_w
-                )
-                * grad_weight
-                * g
-            )
-            grad_alpha = (
-                grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
-            )
+            grad_alpha = (smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g
+            grad_alpha = grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
         else:
             grad_alpha = (
-                (
-                    (
-                        smaller * Qn
-                        + bigger * Qp
-                        + between * Round.apply(q_w)
-                        - between * q_w
-                    )
-                    * grad_weight
-                    * g
-                )
+                ((smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g)
                 .sum()
                 .unsqueeze(dim=0)
             )  # ?
@@ -168,19 +146,15 @@ class LSQActivationQuantizer(nn.Module):
                 if self.mode == "lsq":
                     if self.init_state == 0:
                         self.g = 1.0 / math.sqrt(activation.numel() * self.Qp)
-                        new_s_data = (
-                            torch.mean(torch.abs(activation.detach()))
-                            * 2
-                            / (math.sqrt(self.Qp))
-                        )
+                        new_s_data = torch.mean(torch.abs(activation.detach())) * 2 / (math.sqrt(self.Qp))
                         self.s.data.copy_(new_s_data)
                         self.init_state += 1
                         print(f"initial activation scale to {self.s.data}")
                     elif self.init_state < self.batch_init:
                         # elif self.calibration:
-                        new_s_data = 0.9 * self.s.data + 0.1 * torch.mean(
-                            torch.abs(activation.detach())
-                        ) * 2 / (math.sqrt(self.Qp))
+                        new_s_data = 0.9 * self.s.data + 0.1 * torch.mean(torch.abs(activation.detach())) * 2 / (
+                            math.sqrt(self.Qp)
+                        )
                         self.s.data.copy_(new_s_data)
                         self.init_state += 1
                     elif self.init_state == self.batch_init:
@@ -216,9 +190,7 @@ class LSQActivationQuantizer(nn.Module):
 
 # W(权重)量化
 class LSQWeightQuantizer(nn.Module):
-    def __init__(
-        self, w_bits, all_positive=False, per_channel=False, batch_init=20, mode="lsq"
-    ):
+    def __init__(self, w_bits, all_positive=False, per_channel=False, batch_init=20, mode="lsq"):
         super(LSQWeightQuantizer, self).__init__()
         self.w_bits = w_bits
         self.all_positive = all_positive
@@ -269,47 +241,33 @@ class LSQWeightQuantizer(nn.Module):
                     if self.init_state == 0:
                         self.g = 1.0 / math.sqrt(weight.numel() * self.Qp)
                         if self.per_channel:
-                            weight_tmp = (
-                                weight.detach().contiguous().view(weight.size()[0], -1)
-                            )
-                            new_s_data = (
-                                torch.mean(torch.abs(weight_tmp), dim=1)
-                                * 2
-                                / (math.sqrt(self.Qp))
-                            )
+                            weight_tmp = weight.detach().contiguous().view(weight.size()[0], -1)
+                            new_s_data = torch.mean(torch.abs(weight_tmp), dim=1) * 2 / (math.sqrt(self.Qp))
                             self.s.data.copy_(new_s_data)
                         else:
-                            new_s_data = (
-                                torch.mean(torch.abs(weight.detach()))
-                                * 2
-                                / (math.sqrt(self.Qp))
-                            )
+                            new_s_data = torch.mean(torch.abs(weight.detach())) * 2 / (math.sqrt(self.Qp))
                             self.s.data.copy_(new_s_data)
                         self.init_state += 1
                         print(f"initial weight scale to {self.s.data}")
                     elif self.init_state < self.batch_init:
                         # elif self.calibration:
                         if self.per_channel:
-                            weight_tmp = (
-                                weight.detach().contiguous().view(weight.size()[0], -1)
+                            weight_tmp = weight.detach().contiguous().view(weight.size()[0], -1)
+                            new_s_data = 0.9 * self.s.data + 0.1 * torch.mean(torch.abs(weight_tmp), dim=1) * 2 / (
+                                math.sqrt(self.Qp)
                             )
-                            new_s_data = 0.9 * self.s.data + 0.1 * torch.mean(
-                                torch.abs(weight_tmp), dim=1
-                            ) * 2 / (math.sqrt(self.Qp))
                             self.s.data.copy_(new_s_data)
                         else:
-                            new_s_data = 0.9 * self.s.data + 0.1 * torch.mean(
-                                torch.abs(weight.detach())
-                            ) * 2 / (math.sqrt(self.Qp))
+                            new_s_data = 0.9 * self.s.data + 0.1 * torch.mean(torch.abs(weight.detach())) * 2 / (
+                                math.sqrt(self.Qp)
+                            )
                             self.s.data.copy_(new_s_data)
                         self.init_state += 1
                     elif self.init_state == self.batch_init:
                         # else:
                         self.s.data.copy_(self.s.data.abs())
                 elif self.mode == "minimax":
-                    assert (
-                        not self.per_channel
-                    ), "minimax initialization does not support per channel quantization"
+                    assert not self.per_channel, "minimax initialization does not support per channel quantization"
                     if self.init_state == 0:
                         self.g = 1.0 / math.sqrt(weight.numel() * self.Qp)
                     # if self.calibration:
@@ -329,9 +287,7 @@ class LSQWeightQuantizer(nn.Module):
         else:
             # print(self.s, self.g)
             try:
-                w_q = FunLSQ.apply(
-                    weight, self.s, self.g, self.Qn, self.Qp, self.per_channel
-                )
+                w_q = FunLSQ.apply(weight, self.s, self.g, self.Qn, self.Qp, self.per_channel)
             except RuntimeError:
                 print("have a look on weight")
                 import IPython

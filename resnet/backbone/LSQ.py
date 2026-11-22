@@ -1,15 +1,12 @@
 import torch
 
 # import actnn.cpp_extension.backward_func as ext_backward_func
-from torch.autograd.function import Function
-from torch.nn.modules.utils import _pair
 import torch.nn.functional as F
 import torch.nn as nn
 import math
 from datetime import datetime
 import matplotlib.pyplot as plt
 import os
-import numpy as np
 
 
 # Symmetric layer-wise LsqQuantizer, mainly for weight
@@ -31,8 +28,8 @@ class SymLsqQuantizer(torch.autograd.Function):
             Qn = -(2 ** (num_bits - 1))
             Qp = 2 ** (num_bits - 1) - 1
 
-            assert scale.min() > 0, "step size = {:.6f} becomes non-positive".format(
-                scale
+            assert scale.min() > 0, (
+                "step size = {:.6f} becomes non-positive".format(scale)
             )
             times = 1.0 / math.sqrt(input.numel() * Qp)
             ctx.save_for_backward(input, scale)
@@ -100,7 +97,9 @@ class AsymLsqQuantizer(torch.autograd.Function):
         # asymmetric: make sure input \in [0, +\inf], remember to add it back
         min_val = input.min().item()
         input_ = input - min_val
-        assert scale.min() > 0, "step size = {:.6f} becomes non-positive".format(scale)
+        assert scale.min() > 0, (
+            "step size = {:.6f} becomes non-positive".format(scale)
+        )
         times = 1.0 / math.sqrt(input.numel() * Qp)
         ctx.save_for_backward(input_, scale)
         ctx.other = times, Qn, Qp
@@ -255,7 +254,9 @@ class LSQconv2d(nn.Conv2d):
         elif self.mode.startswith("lsq_sym"):
             return F.conv2d(
                 SymLsqQuantizer.apply(input, self.scale_input, self.a_bits),
-                SymLsqQuantizer.apply(self.weight, self.scale_weight, self.w_bits),
+                SymLsqQuantizer.apply(
+                    self.weight, self.scale_weight, self.w_bits
+                ),
                 self.bias,
                 self.stride,
                 self.padding,
@@ -265,7 +266,9 @@ class LSQconv2d(nn.Conv2d):
         elif self.mode.startswith("lsq_asym"):
             return F.conv2d(
                 AsymLsqQuantizer.apply(input, self.scale_input, self.a_bits),
-                SymLsqQuantizer.apply(self.weight, self.scale_weight, self.w_bits),
+                SymLsqQuantizer.apply(
+                    self.weight, self.scale_weight, self.w_bits
+                ),
                 self.bias,
                 self.stride,
                 self.padding,
@@ -283,7 +286,9 @@ class LSQconv2d(nn.Conv2d):
         plt.plot(self.iter_track, self.active_track)
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
-        if not os.path.exists("plt/step_size_conv/input/{}".format(self.start_time)):
+        if not os.path.exists(
+            "plt/step_size_conv/input/{}".format(self.start_time)
+        ):
             print(
                 "Directory {} created".format(
                     "plt/step_size_conv/input/{}".format(self.start_time)
@@ -305,7 +310,9 @@ class LSQconv2d(nn.Conv2d):
         plt.plot(self.iter_track, self.weight_track)
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
-        if not os.path.exists("plt/step_size_conv/weight/{}".format(self.start_time)):
+        if not os.path.exists(
+            "plt/step_size_conv/weight/{}".format(self.start_time)
+        ):
             print(
                 "Directory {} created".format(
                     "plt/step_size_conv/weight/{}".format(self.start_time)
@@ -313,7 +320,8 @@ class LSQconv2d(nn.Conv2d):
             )
 
         os.makedirs(
-            "plt/step_size_conv/weight/{}".format(self.start_time), exist_ok=True
+            "plt/step_size_conv/weight/{}".format(self.start_time),
+            exist_ok=True,
         )
         plt.savefig(
             "plt/step_size_conv/weight/{}/{}.png".format(

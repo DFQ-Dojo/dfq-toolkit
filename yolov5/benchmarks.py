@@ -62,9 +62,7 @@ def run(
 ):
     y, t = [], time.time()
     device = select_device(device)
-    model_type = type(
-        attempt_load(weights, fuse=False)
-    )  # DetectionModel, SegmentationModel, etc.
+    model_type = type(attempt_load(weights, fuse=False))  # DetectionModel, SegmentationModel, etc.
     for i, (
         name,
         f,
@@ -77,9 +75,7 @@ def run(
                 9,
                 10,
             ), "inference not supported"  # Edge TPU and TF.js are unsupported
-            assert (
-                i != 5 or platform.system() == "Darwin"
-            ), "inference only supported on macOS>=10.13"  # CoreML
+            assert i != 5 or platform.system() == "Darwin", "inference only supported on macOS>=10.13"  # CoreML
             if "cpu" in device.type:
                 assert cpu, "inference not supported on CPU"
             if "cuda" in device.type:
@@ -96,9 +92,7 @@ def run(
                     batch_size=batch_size,
                     device=device,
                     half=half,
-                )[
-                    -1
-                ]  # all others
+                )[-1]  # all others
             assert suffix in str(w), "export failed"
 
             # Validate
@@ -113,9 +107,7 @@ def run(
                     task="speed",
                     half=half,
                 )
-                metric = result[0][
-                    7
-                ]  # (box(p, r, map50, map), mask(p, r, map50, map), *loss(box, obj, cls))
+                metric = result[0][7]  # (box(p, r, map50, map), mask(p, r, map50, map), *loss(box, obj, cls))
             else:  # DetectionModel:
                 result = val_det(
                     data,
@@ -129,14 +121,10 @@ def run(
                 )
                 metric = result[0][3]  # (p, r, map50, map, *loss(box, obj, cls))
             speed = result[2][1]  # times (preprocess, inference, postprocess)
-            y.append(
-                [name, round(file_size(w), 1), round(metric, 4), round(speed, 2)]
-            )  # MB, mAP, t_inference
+            y.append([name, round(file_size(w), 1), round(metric, 4), round(speed, 2)])  # MB, mAP, t_inference
         except Exception as e:
             if hard_fail:
-                assert (
-                    type(e) is AssertionError
-                ), f"Benchmark --hard-fail for {name}: {e}"
+                assert type(e) is AssertionError, f"Benchmark --hard-fail for {name}: {e}"
             LOGGER.warning(f"WARNING ⚠️ Benchmark failure for {name}: {e}")
             y.append([name, None, None, None])  # mAP, t_inference
         if pt_only and i == 0:
@@ -146,22 +134,14 @@ def run(
     LOGGER.info("\n")
     parse_opt()
     notebook_init()  # print system info
-    c = (
-        ["Format", "Size (MB)", "mAP50-95", "Inference time (ms)"]
-        if map
-        else ["Format", "Export", "", ""]
-    )
+    c = ["Format", "Size (MB)", "mAP50-95", "Inference time (ms)"] if map else ["Format", "Export", "", ""]
     py = pd.DataFrame(y, columns=c)
     LOGGER.info(f"\nBenchmarks complete ({time.time() - t:.2f}s)")
     LOGGER.info(str(py if map else py.iloc[:, :2]))
     if hard_fail and isinstance(hard_fail, str):
         metrics = py["mAP50-95"].array  # values to compare to floor
-        floor = eval(
-            hard_fail
-        )  # minimum metric floor to pass, i.e. = 0.29 mAP for YOLOv5n
-        assert all(
-            x > floor for x in metrics if pd.notna(x)
-        ), f"HARD FAIL: mAP50-95 < floor {floor}"
+        floor = eval(hard_fail)  # minimum metric floor to pass, i.e. = 0.29 mAP for YOLOv5n
+        assert all(x > floor for x in metrics if pd.notna(x)), f"HARD FAIL: mAP50-95 < floor {floor}"
     return py
 
 
@@ -214,9 +194,7 @@ def test(
 def parse_opt():
     """Parses command-line arguments for YOLOv5 model inference configuration."""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--weights", type=str, default=ROOT / "yolov5s.pt", help="weights path"
-    )
+    parser.add_argument("--weights", type=str, default=ROOT / "yolov5s.pt", help="weights path")
     parser.add_argument(
         "--imgsz",
         "--img",
@@ -226,15 +204,9 @@ def parse_opt():
         help="inference size (pixels)",
     )
     parser.add_argument("--batch-size", type=int, default=1, help="batch size")
-    parser.add_argument(
-        "--data", type=str, default=ROOT / "data/coco128.yaml", help="dataset.yaml path"
-    )
-    parser.add_argument(
-        "--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu"
-    )
-    parser.add_argument(
-        "--half", action="store_true", help="use FP16 half-precision inference"
-    )
+    parser.add_argument("--data", type=str, default=ROOT / "data/coco128.yaml", help="dataset.yaml path")
+    parser.add_argument("--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
+    parser.add_argument("--half", action="store_true", help="use FP16 half-precision inference")
     parser.add_argument("--test", action="store_true", help="test exports only")
     parser.add_argument("--pt-only", action="store_true", help="test PyTorch only")
     parser.add_argument(

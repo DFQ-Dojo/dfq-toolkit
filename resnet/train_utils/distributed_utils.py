@@ -1,6 +1,5 @@
 from collections import defaultdict, deque
 import datetime
-import pickle
 import time
 import errno
 import os
@@ -36,7 +35,9 @@ class SmoothedValue(object):
         """
         if not is_dist_avail_and_initialized():
             return
-        t = torch.tensor([self.count, self.total], dtype=torch.float64, device="cuda")
+        t = torch.tensor(
+            [self.count, self.total], dtype=torch.float64, device="cuda"
+        )
         dist.barrier()
         dist.all_reduce(t)
         t = t.tolist()
@@ -44,7 +45,9 @@ class SmoothedValue(object):
         self.total = t[1]
 
     @property
-    def median(self):  # @property 是装饰器，这里可简单理解为增加median属性(只读)
+    def median(
+        self,
+    ):  # @property 是装饰器，这里可简单理解为增加median属性(只读)
         d = torch.tensor(list(self.deque))
         return d.median().item()
 
@@ -160,7 +163,9 @@ class MetricLogger(object):
         if attr in self.__dict__:
             return self.__dict__[attr]
         raise AttributeError(
-            "'{}' object has no attribute '{}'".format(type(self).__name__, attr)
+            "'{}' object has no attribute '{}'".format(
+                type(self).__name__, attr
+            )
         )
 
     def __str__(self):
@@ -336,7 +341,8 @@ def init_distributed_mode(args):
     torch.cuda.set_device(args.gpu)
     args.dist_backend = "nccl"
     print(
-        "| distributed init (rank {}): {}".format(args.rank, args.dist_url), flush=True
+        "| distributed init (rank {}): {}".format(args.rank, args.dist_url),
+        flush=True,
     )
     torch.distributed.init_process_group(
         backend=args.dist_backend,

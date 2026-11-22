@@ -63,7 +63,13 @@ class QuantConv2d(nn.Conv2d):
         w = self.weight_function(self.weight, self.weight_bit, v_min, v_max)
 
         return F.conv2d(
-            x, w, self.bias, self.stride, self.padding, self.dilation, self.groups
+            x,
+            w,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
         )
 
 
@@ -152,6 +158,8 @@ class QuantAct(nn.Module):
         if not self.quant:
             return x
 
-        quant_act = self.act_function(x, self.activation_bit, self.x_min, self.x_max)
+        quant_act = self.act_function(
+            x, self.activation_bit, self.x_min, self.x_max
+        )
 
         return quant_act

@@ -203,7 +203,6 @@ def collate_label_batches(ls: List[LabelBatch]) -> LabelBatch:
 
 
 class LabelDataset(torch.utils.data.Dataset):
-
     def __init__(self, label_set: List[LabelBatch]):
         super(LabelDataset, self).__init__()
         self.sample_list = []
@@ -223,7 +222,10 @@ def _collect_sampled_labels(sampling_path: Path) -> List[Path]:
 
 
 def get_sampled_label_loader(
-    calibration_size: int, sampling_path: Path, batch_size: int, device: torch.device
+    calibration_size: int,
+    sampling_path: Path,
+    batch_size: int,
+    device: torch.device,
 ) -> torch.utils.data.DataLoader:
     sampled_labels = _collect_sampled_labels(sampling_path)
     labels = []
@@ -252,7 +254,9 @@ def get_sampled_labelset(
         batch_size=batch_size,
         device=device,
     )
-    return LabelSet(nc=nc, names=names, batch_size=batch_size, generator=dataloader)
+    return LabelSet(
+        nc=nc, names=names, batch_size=batch_size, generator=dataloader
+    )
 
 
 # The generated pseudo data is arranged as follows:
@@ -262,7 +266,9 @@ def get_sampled_labelset(
 #
 
 
-def extract_single_from_batch(img: torch.Tensor, label: LabelBatch) -> List[dict]:
+def extract_single_from_batch(
+    img: torch.Tensor, label: LabelBatch
+) -> List[dict]:
     samples = []
     for idx, img in enumerate(img):
         indices = label.batch_indices == idx
@@ -279,7 +285,9 @@ def extract_single_from_batch(img: torch.Tensor, label: LabelBatch) -> List[dict
 
 class GeneratedDataset(torch.utils.data.Dataset):
     def __init__(
-        self, sample_list: List[Tuple[torch.Tensor, LabelBatch]], calibration_size: int
+        self,
+        sample_list: List[Tuple[torch.Tensor, LabelBatch]],
+        calibration_size: int,
     ):
         super(GeneratedDataset, self).__init__()
         self.sample_list = []
@@ -301,7 +309,9 @@ def get_batch_limited_by_calibration(batches_path: Path) -> List[Path]:
 
 
 def build_pseudo_dataset(
-    pseudo_image_list: List[Path], pseudo_label_list: List[Path], calibration_size: int
+    pseudo_image_list: List[Path],
+    pseudo_label_list: List[Path],
+    calibration_size: int,
 ) -> GeneratedDataset:
     sample_batches = [
         (
@@ -316,8 +326,12 @@ def build_pseudo_dataset(
 def get_generated_dataset(
     pseudo_data_path: Path, calibration_size: int
 ) -> GeneratedDataset:
-    pseudo_image_pathes = get_batch_limited_by_calibration(pseudo_data_path / "images")
-    pseudo_labels_pathes = get_batch_limited_by_calibration(pseudo_data_path / "labels")
+    pseudo_image_pathes = get_batch_limited_by_calibration(
+        pseudo_data_path / "images"
+    )
+    pseudo_labels_pathes = get_batch_limited_by_calibration(
+        pseudo_data_path / "labels"
+    )
     return build_pseudo_dataset(
         pseudo_image_list=pseudo_image_pathes,
         pseudo_label_list=pseudo_labels_pathes,

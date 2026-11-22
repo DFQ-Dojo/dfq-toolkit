@@ -9,9 +9,7 @@ def cosine_similarity(a, b, eps=1e-8):
 
 
 def pearson_correlation(a, b, eps=1e-8):
-    return cosine_similarity(
-        a - a.mean(1).unsqueeze(1), b - b.mean(1).unsqueeze(1), eps
-    )
+    return cosine_similarity(a - a.mean(1).unsqueeze(1), b - b.mean(1).unsqueeze(1), eps)
 
 
 def inter_class_relation(y_s, y_t):

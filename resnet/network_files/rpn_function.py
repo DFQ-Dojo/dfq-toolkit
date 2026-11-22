@@ -1,13 +1,12 @@
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 
 import torch
-from torch import nn, Tensor
+from torch import nn
 from torch.nn import functional as F
 import torchvision
 
 from . import det_utils
 from . import boxes as box_ops
-from .image_list import ImageList
 from backbone.LSQ import LSQconv2d
 
 
@@ -19,7 +18,10 @@ def _onnx_get_num_anchors_and_pre_nms_top_n(ob, orig_pre_nms_top_n):
     num_anchors = operators.shape_as_tensor(ob)[1].unsqueeze(0)
     pre_nms_top_n = torch.min(
         torch.cat(
-            (torch.tensor([orig_pre_nms_top_n], dtype=num_anchors.dtype), num_anchors),
+            (
+                torch.tensor([orig_pre_nms_top_n], dtype=num_anchors.dtype),
+                num_anchors,
+            ),
             0,
         )
     )
@@ -69,7 +71,11 @@ class AnchorsGenerator(nn.Module):
         self._cache = {}
 
     def generate_anchors(
-        self, scales, aspect_ratios, dtype=torch.float32, device=torch.device("cpu")
+        self,
+        scales,
+        aspect_ratios,
+        dtype=torch.float32,
+        device=torch.device("cpu"),
     ):
         # type: (List[int], List[float], torch.dtype, torch.device) -> Tensor
         """
@@ -81,7 +87,9 @@ class AnchorsGenerator(nn.Module):
             device: cpu/gpu
         """
         scales = torch.as_tensor(scales, dtype=dtype, device=device)
-        aspect_ratios = torch.as_tensor(aspect_ratios, dtype=dtype, device=device)
+        aspect_ratios = torch.as_tensor(
+            aspect_ratios, dtype=dtype, device=device
+        )
         h_ratios = torch.sqrt(aspect_ratios)
         w_ratios = 1.0 / h_ratios
 
@@ -127,7 +135,9 @@ class AnchorsGenerator(nn.Module):
         assert cell_anchors is not None
 
         # 遍历每个预测特征层的grid_size，strides和cell_anchors
-        for size, stride, base_anchors in zip(grid_sizes, strides, cell_anchors):
+        for size, stride, base_anchors in zip(
+            grid_sizes, strides, cell_anchors
+        ):
             grid_height, grid_width = size
             stride_height, stride_width = stride
             device = base_anchors.device
@@ -175,7 +185,9 @@ class AnchorsGenerator(nn.Module):
 
     def forward(self, image_list, feature_maps):
         # type: (ImageList, List[Tensor]) -> List[Tensor]
-        grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
+        grid_sizes = list(
+            [feature_map.shape[-2:] for feature_map in feature_maps]
+        )
 
         image_size = image_list.tensors.shape[-2:]
 
@@ -184,15 +196,21 @@ class AnchorsGenerator(nn.Module):
         # one step in feature map equate n pixel stride in origin image
         strides = [
             [
-                torch.tensor(image_size[0] // g[0], dtype=torch.int64, device=device),
-                torch.tensor(image_size[1] // g[1], dtype=torch.int64, device=device),
+                torch.tensor(
+                    image_size[0] // g[0], dtype=torch.int64, device=device
+                ),
+                torch.tensor(
+                    image_size[1] // g[1], dtype=torch.int64, device=device
+                ),
             ]
             for g in grid_sizes
         ]
 
         self.set_cell_anchors(dtype, device)
 
-        anchors_over_all_feature_maps = self.cached_grid_anchors(grid_sizes, strides)
+        anchors_over_all_feature_maps = self.cached_grid_anchors(
+            grid_sizes, strides
+        )
 
         anchors = torch.jit.annotate(List[List[torch.Tensor]], [])
         for i, (image_height, image_width) in enumerate(image_list.image_sizes):
@@ -200,7 +218,9 @@ class AnchorsGenerator(nn.Module):
             for anchors_per_feature_map in anchors_over_all_feature_maps:
                 anchors_in_image.append(anchors_per_feature_map)
             anchors.append(anchors_in_image)
-        anchors = [torch.cat(anchors_per_image) for anchors_per_image in anchors]
+        anchors = [
+            torch.cat(anchors_per_image) for anchors_per_image in anchors
+        ]
         # Clear the cache in case that memory leaks.
         self._cache.clear()
         return anchors
@@ -215,7 +235,9 @@ class RPNHead(nn.Module):
         num_anchors: number of anchors to be predicted
     """
 
-    def __init__(self, in_channels, num_anchors, mode="exact", a_bits=8, w_bits=8):
+    def __init__(
+        self, in_channels, num_anchors, mode="exact", a_bits=8, w_bits=8
+    ):
         super(RPNHead, self).__init__()
         if mode == "exact":
             self.conv = nn.Conv2d(
@@ -288,7 +310,9 @@ def concat_box_prediction_layers(box_cls, box_regression):
     box_regression_flattened = []
 
     # 遍历每个预测特征层
-    for box_cls_per_level, box_regression_per_level in zip(box_cls, box_regression):
+    for box_cls_per_level, box_regression_per_level in zip(
+        box_cls, box_regression
+    ):
         # [batch_size, anchors_num_per_position * classes_num, height, width]
         # 注意，当计算RPN中的proposal时，classes_num=1,只区分目标和背景
         N, AxC, H, W = box_cls_per_level.shape
@@ -300,7 +324,9 @@ def concat_box_prediction_layers(box_cls, box_regression):
         C = AxC // A
 
         # [N, -1, C]
-        box_cls_per_level = permute_and_flatten(box_cls_per_level, N, A, C, H, W)
+        box_cls_per_level = permute_and_flatten(
+            box_cls_per_level, N, A, C, H, W
+        )
         box_cls_flattened.append(box_cls_per_level)
 
         # [N, -1, C]
@@ -309,7 +335,9 @@ def concat_box_prediction_layers(box_cls, box_regression):
         )
         box_regression_flattened.append(box_regression_per_level)
 
-    box_cls = torch.cat(box_cls_flattened, dim=1).flatten(0, -2)  # start_dim, end_dim
+    box_cls = torch.cat(box_cls_flattened, dim=1).flatten(
+        0, -2
+    )  # start_dim, end_dim
     box_regression = torch.cat(box_regression_flattened, dim=1).reshape(-1, 4)
     return box_cls, box_regression
 
@@ -376,7 +404,8 @@ class RegionProposalNetwork(torch.nn.Module):
         )
 
         self.fg_bg_sampler = det_utils.BalancedPositiveNegativeSampler(
-            batch_size_per_image, positive_fraction  # 256, 0.5
+            batch_size_per_image,
+            positive_fraction,  # 256, 0.5
         )
 
         # use during testing
@@ -408,11 +437,15 @@ class RegionProposalNetwork(torch.nn.Module):
                     anchors_per_image.shape, dtype=torch.float32, device=device
                 )
                 labels_per_image = torch.zeros(
-                    (anchors_per_image.shape[0],), dtype=torch.float32, device=device
+                    (anchors_per_image.shape[0],),
+                    dtype=torch.float32,
+                    device=device,
                 )
             else:
                 # set to self.box_similarity when https://github.com/pytorch/pytorch/issues/27495 lands
-                match_quality_matrix = box_ops.box_iou(gt_boxes, anchors_per_image)
+                match_quality_matrix = box_ops.box_iou(
+                    gt_boxes, anchors_per_image
+                )
                 matched_idxs = self.proposal_matcher(match_quality_matrix)
                 # get the targets corresponding GT for each proposal
                 # NB: need to clamp the indices because we can have a single
@@ -446,8 +479,10 @@ class RegionProposalNetwork(torch.nn.Module):
         # 遍历每个预测特征层上的预测目标概率信息
         for ob in objectness.split(num_anchors_per_level, 1):
             if torchvision._is_tracing():
-                num_anchors, pre_nms_top_n = _onnx_get_num_anchors_and_pre_nms_top_n(
-                    ob, self.pre_nms_top_n()
+                num_anchors, pre_nms_top_n = (
+                    _onnx_get_num_anchors_and_pre_nms_top_n(
+                        ob, self.pre_nms_top_n()
+                    )
                 )
             else:
                 num_anchors = ob.shape[1]  # 预测特征层上的预测的anchors个数
@@ -516,9 +551,11 @@ class RegionProposalNetwork(torch.nn.Module):
             final_scores.append(scores)
         return final_boxes, final_scores
 
-    def compute_loss(self, objectness, pred_bbox_deltas, labels, regression_targets):
+    def compute_loss(
+        self, objectness, pred_bbox_deltas, labels, regression_targets
+    ):
         # type: (Tensor, Tensor, List[Tensor], List[Tensor]) -> Tuple[Tensor, Tensor]
-        
+
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         # sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
         sampled_pos_inds = torch.where(torch.cat(sampled_pos_inds, dim=0))[0]
@@ -602,8 +639,12 @@ class RegionProposalNetwork(torch.nn.Module):
         losses = {}
         if (self.training or distill) and targets is not None:
             assert targets is not None
-            labels, matched_gt_boxes = self.assign_targets_to_anchors(anchors, targets)
-            regression_targets = self.box_coder.encode(matched_gt_boxes, anchors)
+            labels, matched_gt_boxes = self.assign_targets_to_anchors(
+                anchors, targets
+            )
+            regression_targets = self.box_coder.encode(
+                matched_gt_boxes, anchors
+            )
             loss_objectness, loss_rpn_box_reg = self.compute_loss(
                 objectness, pred_bbox_deltas, labels, regression_targets
             )

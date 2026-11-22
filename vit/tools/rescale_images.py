@@ -12,10 +12,11 @@ from pathlib import Path
 
 
 class GenOptions(BaseSettings, cli_parse_args=True, cli_prog_name="Generation"):
-
     syn_dir: str = Field(description="places of synthesized data")
 
-    scale: str = Field(description="scale. std: [0, 1] image_net: [-m/s, (1-m) /s]")
+    scale: str = Field(
+        description="scale. std: [0, 1] image_net: [-m/s, (1-m) /s]"
+    )
 
 
 def get_all_pts(syn_dir: str) -> List[Path]:

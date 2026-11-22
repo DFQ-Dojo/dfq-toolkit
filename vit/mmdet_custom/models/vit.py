@@ -55,12 +55,19 @@ class PatchEmbed(nn.Module):
         patch_size = to_2tuple(patch_size)
         self.img_size = img_size
         self.patch_size = patch_size
-        self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
+        self.grid_size = (
+            img_size[0] // patch_size[0],
+            img_size[1] // patch_size[1],
+        )
         self.num_patches = self.grid_size[0] * self.grid_size[1]
         self.flatten = flatten
 
         self.proj = nn.Conv2d(
-            in_chans, embed_dim, kernel_size=patch_size, stride=patch_size, bias=bias
+            in_chans,
+            embed_dim,
+            kernel_size=patch_size,
+            stride=patch_size,
+            bias=bias,
         )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
@@ -74,7 +81,9 @@ class PatchEmbed(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, dim, num_heads=8, qkv_bias=False, attn_drop=0.0, proj_drop=0.0):
+    def __init__(
+        self, dim, num_heads=8, qkv_bias=False, attn_drop=0.0, proj_drop=0.0
+    ):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
@@ -92,7 +101,9 @@ class Attention(nn.Module):
             .reshape(B, N, 3, self.num_heads, C // self.num_heads)
             .permute(2, 0, 3, 1, 4)
         )
-        q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv.unbind(
+            0
+        )  # make torchscript happy (cannot use tensor as tuple)
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
@@ -113,9 +124,13 @@ def window_partition(x, window_size):
         windows: (num_windows*B, window_size, window_size, C)
     """
     B, H, W, C = x.shape
-    x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
+    x = x.view(
+        B, H // window_size, window_size, W // window_size, window_size, C
+    )
     windows = (
-        x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
+        x.permute(0, 1, 3, 2, 4, 5)
+        .contiguous()
+        .view(-1, window_size, window_size, C)
     )
     return windows
 
@@ -176,13 +191,17 @@ class WindowedAttention(nn.Module):
         )
         B, C_kw_kw, L = qkv.shape  # L - the num of windows
         qkv = qkv.reshape(B, C * 3, N_, L).permute(0, 3, 2, 1)  # [B, L, N_, C]
-        qkv = qkv.reshape(B, L, N_, 3, self.num_heads, C // self.num_heads).permute(
-            3, 0, 1, 4, 2, 5
-        )
-        q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+        qkv = qkv.reshape(
+            B, L, N_, 3, self.num_heads, C // self.num_heads
+        ).permute(3, 0, 1, 4, 2, 5)
+        q, k, v = qkv.unbind(
+            0
+        )  # make torchscript happy (cannot use tensor as tuple)
 
         # q,k,v [B, L, num_head, N_, C/num_head]
-        attn = (q @ k.transpose(-2, -1)) * self.scale  # [B, L, num_head, N_, N_]
+        attn = (
+            q @ k.transpose(-2, -1)
+        ) * self.scale  # [B, L, num_head, N_, N_]
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)  # [B, L, num_head, N_, N_]
         # attn @ v = [B, L, num_head, N_, C/num_head]
@@ -331,7 +350,9 @@ class Block(nn.Module):
                 proj_drop=drop,
             )
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = (
+            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        )
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(
@@ -359,7 +380,9 @@ class Block(nn.Module):
 
         def _inner_forward(x):
             if self.layer_scale:
-                x = x + self.drop_path(self.gamma1 * self.attn(self.norm1(x), H, W))
+                x = x + self.drop_path(
+                    self.gamma1 * self.attn(self.norm1(x), H, W)
+                )
                 x = x + self.drop_path(self.gamma2 * self.mlp(self.norm2(x)))
             else:
                 x = x + self.drop_path(self.attn(self.norm1(x), H, W))
@@ -448,10 +471,14 @@ class TIMMVisionTransformer(BaseModule):
         self.drop_rate = drop_rate
 
         window_attn = (
-            [window_attn] * depth if not isinstance(window_attn, list) else window_attn
+            [window_attn] * depth
+            if not isinstance(window_attn, list)
+            else window_attn
         )
         window_size = (
-            [window_size] * depth if not isinstance(window_size, list) else window_size
+            [window_size] * depth
+            if not isinstance(window_size, list)
+            else window_size
         )
         logging.info("window attention:", window_attn)
         logging.info("window size:", window_size)
@@ -502,7 +529,11 @@ class TIMMVisionTransformer(BaseModule):
         if isinstance(pretrained, str):
             logger = get_root_logger()
             load_checkpoint(
-                self, pretrained, map_location="cpu", strict=False, logger=logger
+                self,
+                pretrained,
+                map_location="cpu",
+                strict=False,
+                logger=logger,
             )
 
     def forward_features(self, x):

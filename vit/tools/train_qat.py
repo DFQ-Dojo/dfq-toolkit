@@ -34,12 +34,15 @@ from mmdet_custom.models.quant_vit import convert_vit_baseline
 CONFIG_ENVIRON_KEY = "TRAIN_CONFIG"
 
 CONFIG_FILE: Optional[Path] = (
-    Path(os.environ[CONFIG_ENVIRON_KEY]) if os.environ.get(CONFIG_ENVIRON_KEY) else None
+    Path(os.environ[CONFIG_ENVIRON_KEY])
+    if os.environ.get(CONFIG_ENVIRON_KEY)
+    else None
 )
 
 
-class QatOptions(BaseSettings, cli_parse_args=True, cli_prog_name="QAT training"):
-
+class QatOptions(
+    BaseSettings, cli_parse_args=True, cli_prog_name="QAT training"
+):
     model_config = SettingsConfigDict(json_file=CONFIG_FILE)
 
     local_rank: int = Field(0)
@@ -87,7 +90,9 @@ class QatOptions(BaseSettings, cli_parse_args=True, cli_prog_name="QAT training"
 
     kd_modules: str = Field("block", description="places to hook MSE")
 
-    original_loss_weight: float = Field(0.1, description="kd original loss weight")
+    original_loss_weight: float = Field(
+        0.1, description="kd original loss weight"
+    )
 
     kd_loss_weight: float = Field(0.1, description="weight of KL divergence.")
 
@@ -316,7 +321,9 @@ def main():
 
     # set random seeds
     seed = init_random_seed(opt.seed)
-    logger.info(f"Set random seed to {seed}, " f"deterministic: {opt.deterministic}")
+    logger.info(
+        f"Set random seed to {seed}, deterministic: {opt.deterministic}"
+    )
     set_random_seed(seed, deterministic=opt.deterministic)
     cfg.seed = seed
     meta["seed"] = seed
@@ -358,7 +365,8 @@ def main():
         # save mmdet version, config file content and class names in
         # checkpoints as meta data
         cfg.checkpoint_config.meta = dict(
-            mmdet_version=__version__ + get_git_hash()[:7], CLASSES=datasets[0].CLASSES
+            mmdet_version=__version__ + get_git_hash()[:7],
+            CLASSES=datasets[0].CLASSES,
         )
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES

@@ -63,7 +63,8 @@ class EarlyStoppingHook(Hook):
         if rule is not None:
             if rule not in ["greater", "less"]:
                 raise ValueError(
-                    '`rule` should be either "greater" or "less", ' f"but got {rule}"
+                    '`rule` should be either "greater" or "less", '
+                    f"but got {rule}"
                 )
         else:
             rule = self._init_rule(monitor)
@@ -91,7 +92,8 @@ class EarlyStoppingHook(Hook):
             rule = "less"
         else:
             raise ValueError(
-                f"Cannot infer the rule for {monitor}, thus rule " "must be specified."
+                f"Cannot infer the rule for {monitor}, thus rule "
+                "must be specified."
             )
         return rule
 
@@ -120,7 +122,6 @@ class EarlyStoppingHook(Hook):
                 f"{self.rule} than {self.stopping_threshold}."
             )
         elif compare(self.best_score + self.min_delta, current_score):
-
             self.wait_count += 1
 
             if self.wait_count >= self.patience:
@@ -143,9 +144,9 @@ class EarlyStoppingHook(Hook):
             runner (Runner): The runner of the training process.
         """
 
-        assert hasattr(
-            runner.train_loop, "stop_training"
-        ), "`train_loop` should contain `stop_training` variable."
+        assert hasattr(runner.train_loop, "stop_training"), (
+            "`train_loop` should contain `stop_training` variable."
+        )
 
     def after_val_epoch(self, runner, metrics):
         """Decide whether to stop the training process.

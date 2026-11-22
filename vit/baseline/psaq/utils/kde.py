@@ -1,4 +1,4 @@
-"""Implementation of Kernel Density Estimation (KDE) [1].
+r"""Implementation of Kernel Density Estimation (KDE) [1].
 Kernel density estimation is a nonparameteric density estimation method. It works by
 placing kernels K on each point in a "training" dataset D. Then, for a test point x,
 p(x) is estimated as p(x) = 1 / |D| \sum_{x_i \in D} K(u(x, x_i)), where u is some
@@ -79,7 +79,9 @@ class ParzenWindowKernel(Kernel):
 
     def sample(self, train_Xs):
         device = train_Xs.device
-        noise = (torch.rand(train_Xs.shape, device=device) - 0.5) * self.bandwidth
+        noise = (
+            torch.rand(train_Xs.shape, device=device) - 0.5
+        ) * self.bandwidth
         return train_Xs + noise
 
 

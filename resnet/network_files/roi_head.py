@@ -1,7 +1,6 @@
-from typing import Optional, List, Dict, Tuple
+from typing import List, Dict
 
 import torch
-from torch import Tensor
 import torch.nn.functional as F
 from torchvision.ops import roi_align
 
@@ -96,7 +95,9 @@ def project_masks_on_boxes(gt_masks, boxes, matched_idxs, M):
     return roi_align(gt_masks, rois, (M, M), 1.0)[:, 0]
 
 
-def maskrcnn_loss(mask_logits, proposals, gt_masks, gt_labels, mask_matched_idxs):
+def maskrcnn_loss(
+    mask_logits, proposals, gt_masks, gt_labels, mask_matched_idxs
+):
     # type: (Tensor, List[Tensor], List[Tensor], List[Tensor], List[Tensor]) -> Tensor
     """
 
@@ -112,7 +113,9 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks, gt_labels, mask_matched_idxs
     """
 
     discretization_size = mask_logits.shape[-1]
-    labels = [gt_label[idxs] for gt_label, idxs in zip(gt_labels, mask_matched_idxs)]
+    labels = [
+        gt_label[idxs] for gt_label, idxs in zip(gt_labels, mask_matched_idxs)
+    ]
     mask_targets = [
         project_masks_on_boxes(m, p, i, discretization_size)
         for m, p, i in zip(gt_masks, proposals, mask_matched_idxs)
@@ -127,7 +130,9 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks, gt_labels, mask_matched_idxs
 
     # 计算预测mask与真实gt_mask之间的BCELoss
     mask_loss = F.binary_cross_entropy_with_logits(
-        mask_logits[torch.arange(labels.shape[0], device=labels.device), labels],
+        mask_logits[
+            torch.arange(labels.shape[0], device=labels.device), labels
+        ],
         mask_targets,
     )
     return mask_loss
@@ -171,7 +176,8 @@ class RoIHeads(torch.nn.Module):
         )
 
         self.fg_bg_sampler = det_utils.BalancedPositiveNegativeSampler(
-            batch_size_per_image, positive_fraction  # default: 512
+            batch_size_per_image,
+            positive_fraction,  # default: 512
         )  # default: 0.25
 
         if bbox_reg_weights is None:
@@ -219,10 +225,14 @@ class RoIHeads(torch.nn.Module):
                 # background image
                 device = proposals_in_image.device
                 clamped_matched_idxs_in_image = torch.zeros(
-                    (proposals_in_image.shape[0],), dtype=torch.int64, device=device
+                    (proposals_in_image.shape[0],),
+                    dtype=torch.int64,
+                    device=device,
                 )
                 labels_in_image = torch.zeros(
-                    (proposals_in_image.shape[0],), dtype=torch.int64, device=device
+                    (proposals_in_image.shape[0],),
+                    dtype=torch.int64,
+                    device=device,
                 )
             else:
                 # set to self.box_similarity when https://github.com/pytorch/pytorch/issues/27495 lands
@@ -230,21 +240,29 @@ class RoIHeads(torch.nn.Module):
                     gt_boxes_in_image, proposals_in_image
                 )
 
-                matched_idxs_in_image = self.proposal_matcher(match_quality_matrix)
+                matched_idxs_in_image = self.proposal_matcher(
+                    match_quality_matrix
+                )
 
-                clamped_matched_idxs_in_image = matched_idxs_in_image.clamp(min=0)
-                labels_in_image = gt_labels_in_image[clamped_matched_idxs_in_image]
+                clamped_matched_idxs_in_image = matched_idxs_in_image.clamp(
+                    min=0
+                )
+                labels_in_image = gt_labels_in_image[
+                    clamped_matched_idxs_in_image
+                ]
                 labels_in_image = labels_in_image.to(dtype=torch.int64)
 
                 # label background (below the low threshold)
                 bg_inds = (
-                    matched_idxs_in_image == self.proposal_matcher.BELOW_LOW_THRESHOLD
+                    matched_idxs_in_image
+                    == self.proposal_matcher.BELOW_LOW_THRESHOLD
                 )  # -1
                 labels_in_image[bg_inds] = 0
 
                 # label ignore proposals (between low and high threshold)
                 ignore_inds = (
-                    matched_idxs_in_image == self.proposal_matcher.BETWEEN_THRESHOLDS
+                    matched_idxs_in_image
+                    == self.proposal_matcher.BETWEEN_THRESHOLDS
                 )  # -2
                 labels_in_image[ignore_inds] = -1  # -1 is ignored by sampler
 
@@ -314,7 +332,9 @@ class RoIHeads(torch.nn.Module):
 
             gt_boxes_in_image = gt_boxes[img_id]
             if gt_boxes_in_image.numel() == 0:
-                gt_boxes_in_image = torch.zeros((1, 4), dtype=dtype, device=device)
+                gt_boxes_in_image = torch.zeros(
+                    (1, 4), dtype=dtype, device=device
+                )
             matched_gt_boxes.append(gt_boxes_in_image[matched_idxs[img_id]])
 
         regression_targets = self.box_coder.encode(matched_gt_boxes, proposals)
@@ -328,11 +348,13 @@ class RoIHeads(torch.nn.Module):
         image_shapes,  # type: List[Tuple[int, int]]
     ):
         # type: (...) -> Tuple[List[Tensor], List[Tensor], List[Tensor]]
-        
+
         device = class_logits.device
         num_classes = class_logits.shape[-1]
 
-        boxes_per_image = [boxes_in_image.shape[0] for boxes_in_image in proposals]
+        boxes_per_image = [
+            boxes_in_image.shape[0] for boxes_in_image in proposals
+        ]
         pred_boxes = self.box_coder.decode(box_regression, proposals)
 
         pred_scores = F.softmax(class_logits, -1)
@@ -407,12 +429,12 @@ class RoIHeads(torch.nn.Module):
         if targets is not None:
             for t in targets:
                 floating_point_types = (torch.float, torch.double, torch.half)
-                assert (
-                    t["boxes"].dtype in floating_point_types
-                ), "target boxes must of float type"
-                assert (
-                    t["labels"].dtype == torch.int64
-                ), "target labels must of int64 type"
+                assert t["boxes"].dtype in floating_point_types, (
+                    "target boxes must of float type"
+                )
+                assert t["labels"].dtype == torch.int64, (
+                    "target labels must of int64 type"
+                )
 
         if (self.training or distill) and targets is not None:
             proposals, matched_idxs, labels, regression_targets = (
@@ -483,7 +505,9 @@ class RoIHeads(torch.nn.Module):
             mask_proposals = [p["boxes"] for p in result]
             if (self.training or distill) and matched_idxs is not None:
                 if matched_idxs is None:
-                    raise ValueError("if in training, matched_idxs should not be None")
+                    raise ValueError(
+                        "if in training, matched_idxs should not be None"
+                    )
 
                 # during training, only focus on positive boxes
                 num_images = len(proposals)
@@ -498,14 +522,18 @@ class RoIHeads(torch.nn.Module):
             else:
                 pos_matched_idxs = None
 
-            mask_features = self.mask_roi_pool(features, mask_proposals, image_shapes)
+            mask_features = self.mask_roi_pool(
+                features, mask_proposals, image_shapes
+            )
             mask_features = self.mask_head(mask_features)
             mask_logits = self.mask_predictor(mask_features)
 
             loss_mask = {}
             if distill:
                 if not (
-                    targets is None or pos_matched_idxs is None or mask_logits is None
+                    targets is None
+                    or pos_matched_idxs is None
+                    or mask_logits is None
                 ):
                     gt_masks = [t["masks"] for t in targets]
                     gt_labels = [t["labels"] for t in targets]

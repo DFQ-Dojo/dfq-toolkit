@@ -9,17 +9,14 @@ import json
 import torch
 from tqdm import tqdm
 import numpy as np
-from torchvision import transforms as Transforms
 
 import transforms
 from backbone import resnet50_fpn_backbone
-from network_files import MaskRCNN, FasterRCNN, FastRCNNPredictor
+from network_files import FasterRCNN
 from my_dataset_coco import CocoDetection
-from my_dataset_voc import VOCInstances
 from train_utils import EvalCOCOMetric
-from typing import Tuple, List, Dict, Optional, Union
+from typing import Tuple, List
 from network_files.transform import GeneralizedRCNNTransform
-from draw_box_utils import draw_objs
 
 
 def summarize(self, catId=None):
@@ -30,7 +27,9 @@ def summarize(self, catId=None):
 
     def _summarize(ap=1, iouThr=None, areaRng="all", maxDets=100):
         p = self.params
-        iStr = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}"
+        iStr = (
+            " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}"
+        )
         titleStr = "Average Precision" if ap == 1 else "Average Recall"
         typeStr = "(AP)" if ap == 1 else "(AR)"
         iouStr = (
@@ -72,13 +71,19 @@ def summarize(self, catId=None):
         else:
             mean_s = np.mean(s[s > -1])
 
-        print_string = iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s)
+        print_string = iStr.format(
+            titleStr, typeStr, iouStr, areaRng, maxDets, mean_s
+        )
         return mean_s, print_string
 
     stats, print_list = [0] * 12, [""] * 12
     stats[0], print_list[0] = _summarize(1)
-    stats[1], print_list[1] = _summarize(1, iouThr=0.5, maxDets=self.params.maxDets[2])
-    stats[2], print_list[2] = _summarize(1, iouThr=0.75, maxDets=self.params.maxDets[2])
+    stats[1], print_list[1] = _summarize(
+        1, iouThr=0.5, maxDets=self.params.maxDets[2]
+    )
+    stats[2], print_list[2] = _summarize(
+        1, iouThr=0.75, maxDets=self.params.maxDets[2]
+    )
     stats[3], print_list[3] = _summarize(
         1, areaRng="small", maxDets=self.params.maxDets[2]
     )
@@ -109,7 +114,9 @@ def summarize(self, catId=None):
     return stats, print_info
 
 
-def save_info(coco_evaluator, category_index: dict, save_name: str = "record_mAP.txt"):
+def save_info(
+    coco_evaluator, category_index: dict, save_name: str = "record_mAP.txt"
+):
     iou_type = coco_evaluator.params.iouType
     print(f"IoU metric: {iou_type}")
     # calculate COCO info for all classes
@@ -138,15 +145,17 @@ def save_info(coco_evaluator, category_index: dict, save_name: str = "record_mAP
 
 
 def main(parser_data):
-    device = torch.device(parser_data.device if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        parser_data.device if torch.cuda.is_available() else "cpu"
+    )
     print("Using {} device training.".format(device.type))
 
     data_transform = {"val": transforms.Compose([transforms.ToTensor()])}
 
     # read class_indict
     label_json_path = parser_data.label_json_path
-    assert os.path.exists(label_json_path), "json file {} dose not exist.".format(
-        label_json_path
+    assert os.path.exists(label_json_path), (
+        "json file {} dose not exist.".format(label_json_path)
     )
     with open(label_json_path, "r") as f:
         category_index = json.load(f)
@@ -180,9 +189,13 @@ def main(parser_data):
 
     # 载入你自己训练好的模型权重
     weights_path = parser_data.weights_path
-    assert os.path.exists(weights_path), "not found {} file.".format(weights_path)
+    assert os.path.exists(weights_path), "not found {} file.".format(
+        weights_path
+    )
     weights_dict = torch.load(weights_path, map_location="cpu")
-    weights_dict = weights_dict["model"] if "model" in weights_dict else weights_dict
+    weights_dict = (
+        weights_dict["model"] if "model" in weights_dict else weights_dict
+    )
     model.load_state_dict(weights_dict)
     # print(model)
 
@@ -195,7 +208,9 @@ def main(parser_data):
     image_std = [0.229, 0.224, 0.225]
     min_size = 800
     max_size = 1333
-    transform = GeneralizedRCNNTransform(min_size, max_size, image_mean, image_std)
+    transform = GeneralizedRCNNTransform(
+        min_size, max_size, image_mean, image_std
+    )
 
     det_metric = EvalCOCOMetric(val_dataset.coco, "bbox", "det_results.json")
     # seg_metric = EvalCOCOMetric(val_dataset.coco, "segm", "seg_results.json")
@@ -229,7 +244,9 @@ def main(parser_data):
             # import IPython
             # IPython.embed()
 
-            outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+            outputs = [
+                {k: v.to(cpu_device) for k, v in t.items()} for t in outputs
+            ]
             det_metric.update(targets, outputs)
             # seg_metric.update(targets, outputs)
 
@@ -251,10 +268,14 @@ if __name__ == "__main__":
     parser.add_argument("--device", default="cuda", help="device")
 
     # 检测目标类别数(不包含背景)
-    parser.add_argument("--num-classes", type=int, default=90, help="number of classes")
+    parser.add_argument(
+        "--num-classes", type=int, default=90, help="number of classes"
+    )
 
     # 数据集的根目录
-    parser.add_argument("--data-path", default="/data/coco2017", help="dataset root")
+    parser.add_argument(
+        "--data-path", default="/data/coco2017", help="dataset root"
+    )
 
     # 训练好的权重文件
     parser.add_argument(
@@ -273,7 +294,9 @@ if __name__ == "__main__":
         help="batch size when validation.",
     )
     # 类别索引和类别名称对应关系
-    parser.add_argument("--label-json-path", type=str, default="coco91_indices.json")
+    parser.add_argument(
+        "--label-json-path", type=str, default="coco91_indices.json"
+    )
 
     args = parser.parse_args()
 

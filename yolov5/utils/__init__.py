@@ -8,11 +8,7 @@ import threading
 
 def emojis(str=""):
     """Returns an emoji-safe version of a string, stripped of emojis on Windows platforms."""
-    return (
-        str.encode().decode("ascii", "ignore")
-        if platform.system() == "Windows"
-        else str
-    )
+    return str.encode().decode("ascii", "ignore") if platform.system() == "Windows" else str
 
 
 class TryExcept(contextlib.ContextDecorator):
@@ -76,13 +72,9 @@ def notebook_init(verbose=True):
     import psutil
 
     if check_requirements("wandb", install=False):
-        os.system(
-            "pip uninstall -y wandb"
-        )  # eliminate unexpected account creation prompt with infinite hang
+        os.system("pip uninstall -y wandb")  # eliminate unexpected account creation prompt with infinite hang
     if is_colab():
-        shutil.rmtree(
-            "/content/sample_data", ignore_errors=True
-        )  # remove colab /sample_data directory
+        shutil.rmtree("/content/sample_data", ignore_errors=True)  # remove colab /sample_data directory
 
     # System info
     display = None

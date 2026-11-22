@@ -74,9 +74,9 @@ class FpSampler(BaseModel, arbitrary_types_allowed=True):
                     xywh2xyxy(_new_targets[:, 2:]),
                     xywh2xyxy(_target[:, 2:]),
                 )
-                assert (
-                    len(ious.shape) == 2
-                ), f"something is wrong when {_new_targets} {_target} {ious} happens."
+                assert len(ious.shape) == 2, (
+                    f"something is wrong when {_new_targets} {_target} {ious} happens."
+                )
                 max_ious, _ = torch.max(ious, dim=1)
                 _add_targets = (max_ious < self.box_sampler_overlap_iou).long()
                 add_targets[new_targets[:, 0] == batch_idx] += _add_targets

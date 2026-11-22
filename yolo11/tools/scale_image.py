@@ -35,7 +35,6 @@ from pathlib import Path
 
 
 class GenOptions(BaseSettings, cli_parse_args=True, cli_prog_name="Generation"):
-
     syn_dir: str = Field(description="places of synthesized data")
 
     scale: str = Field(
@@ -67,7 +66,11 @@ def std_clamp(img: torch.Tensor):
     return img.clamp(0, 1)
 
 
-scale_modes = {"std": std_scale, "image_net": image_net_scale, "clamp": std_clamp}
+scale_modes = {
+    "std": std_scale,
+    "image_net": image_net_scale,
+    "clamp": std_clamp,
+}
 
 
 def scale_all_pts(syn_dir: str, scale: str):

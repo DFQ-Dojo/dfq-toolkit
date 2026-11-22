@@ -1,4 +1,3 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -38,9 +37,7 @@ class WrappedGPT:
 
         inp = inp.type(torch.float32)
         self.scaler_row += torch.norm(inp, p=2, dim=1) ** 2 / self.nsamples
-        assert self.scaler_row.shape == torch.Size(
-            [C_in]
-        ), f"scaler shape is {self.scaler_row.shape}"
+        assert self.scaler_row.shape == torch.Size([C_in]), f"scaler shape is {self.scaler_row.shape}"
 
 
 class WandaConv2d(nn.Conv2d):
@@ -86,17 +83,11 @@ class WandaConv2d(nn.Conv2d):
             self.prune_mode = prune_mode
 
     def end_calibration(self):
-        scaler = self.wrapped_gpt.scaler_row[None, :, None, None].expand(
-            self.weight.shape
-        )
-        W_metric = torch.abs(self.weight.data) * torch.sqrt(
-            scaler
-        )  # [out_channel, in_channel, kernel, kernel]
+        scaler = self.wrapped_gpt.scaler_row[None, :, None, None].expand(self.weight.shape)
+        W_metric = torch.abs(self.weight.data) * torch.sqrt(scaler)  # [out_channel, in_channel, kernel, kernel]
         if self.prune_n != 0:
             # todo: structured n:m sparsity
-            W_metric = W_metric.reshape(
-                W_metric.shape[0], -1
-            )  # [out_channel, in_channel * kernel * kernel]
+            W_metric = W_metric.reshape(W_metric.shape[0], -1)  # [out_channel, in_channel * kernel * kernel]
             W_mask = torch.zeros_like(W_metric) == 1
             for ii in range(W_metric.shape[1]):
                 if ii % self.prune_m == 0:
@@ -111,9 +102,7 @@ class WandaConv2d(nn.Conv2d):
         else:
             # W_metric = W_metric.permute(1,0,2,3).contiguous().view(self.weight.shape[1], -1) # [in_channel, out * kernel * kernel]
             if self.prune_mode == "output":
-                W_metric = W_metric.reshape(
-                    W_metric.shape[0], -1
-                )  # [out_channel, in_channel * kernel * kernel]
+                W_metric = W_metric.reshape(W_metric.shape[0], -1)  # [out_channel, in_channel * kernel * kernel]
 
                 W_mask = torch.zeros_like(W_metric) == 1
                 # sort as in channel dimension
@@ -122,9 +111,7 @@ class WandaConv2d(nn.Conv2d):
                 indices = sort_res[1][:, : int(W_metric.shape[1] * self.sparsity_ratio)]
                 W_mask.scatter_(1, indices, True)  # [in_channel, out * kernel * kernel]
                 # W_mask = W_mask.view(torch.transpose(self.weight, 0, 1).shape).permute(1,0,2,3).contiguous() # [out_channel, in_channel, kernel, kernel]
-                W_mask = W_mask.view(
-                    self.weight.shape
-                )  # [out_channel, in_channel, kernel, kernel]
+                W_mask = W_mask.view(self.weight.shape)  # [out_channel, in_channel, kernel, kernel]
             elif self.prune_mode == "layer":
                 W_metric = W_metric.reshape(-1)
                 W_mask = torch.zeros_like(W_metric) == 1
@@ -143,7 +130,7 @@ class WandaConv2d(nn.Conv2d):
         sub_count += (W == 0).sum().item()
         sub_params += W.numel()
 
-        print(f"sparsity {float(sub_count)/sub_params:.6f}")
+        print(f"sparsity {float(sub_count) / sub_params:.6f}")
 
     def forward(self, input):
         if self.prune:

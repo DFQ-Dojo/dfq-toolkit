@@ -22,7 +22,7 @@ class KDLoss:
     (1) original loss of the student model
     (2) the KL divergence between teacher model and student model
     (3) the MSE distance between teacher model and student model
-    
+
     NOTE: Please call enable_kd to register hooks.
     """
 
@@ -49,7 +49,9 @@ class KDLoss:
 
         # init kd loss
         if kd_methods.kd_loss.kind == KDMethodsKind.KL:
-            self.kd_loss: KLDivergence | DIST = KLDivergence(kd_methods.kd_loss.tau)
+            self.kd_loss: KLDivergence | DIST = KLDivergence(
+                kd_methods.kd_loss.tau
+            )
         elif kd_methods.kd_loss.kind == KDMethodsKind.DIST:
             self.kd_loss = DIST(
                 beta=kd_methods.kd_loss.beta,
@@ -68,8 +70,12 @@ class KDLoss:
 
     def enable_kd(self):
         # register forward hook
-        self._register_forward_hook(self.student, self.mse_modules, teacher=False)
-        self._register_forward_hook(self.teacher, self.mse_modules, teacher=True)
+        self._register_forward_hook(
+            self.student, self.mse_modules, teacher=False
+        )
+        self._register_forward_hook(
+            self.teacher, self.mse_modules, teacher=True
+        )
 
     def __call__(self, batch, preds):
         with torch.no_grad():
@@ -102,7 +108,9 @@ class KDLoss:
         return total_loss, loss_items
         # return total_loss, ori_loss, kd_loss, mse_loss, loss_items
 
-    def _register_forward_hook(self, model, name: KDModules, teacher: bool = False):
+    def _register_forward_hook(
+        self, model, name: KDModules, teacher: bool = False
+    ):
         # use the output of model
         print(f"register hook, teacher is {teacher}")
         model.register_forward_hook(
@@ -116,7 +124,11 @@ class KDLoss:
                 ):
                     print(f"layer {k} add hook")
                     m.register_forward_hook(
-                        partial(self._forward_hook, teacher=teacher, name="layer" + k)
+                        partial(
+                            self._forward_hook,
+                            teacher=teacher,
+                            name="layer" + k,
+                        )
                     )
 
     def _forward_hook(self, module, input, output, teacher=False, name=""):

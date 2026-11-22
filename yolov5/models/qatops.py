@@ -1,8 +1,6 @@
 import torch
 
 # import actnn.cpp_extension.backward_func as ext_backward_func
-from torch.autograd.function import Function
-from torch.nn.modules.utils import _pair
 import torch.nn.functional as F
 import torch.nn as nn
 import math
@@ -49,20 +47,10 @@ class SymLsqQuantizer(torch.autograd.Function):
 
         indicate_small = (q_w < Qn).float()
         indicate_big = (q_w > Qp).float()
-        indicate_middle = (
-            1.0 - indicate_small - indicate_big
-        )  # this is more cpu-friendly than torch.ones(input_.shape)
+        indicate_middle = 1.0 - indicate_small - indicate_big  # this is more cpu-friendly than torch.ones(input_.shape)
 
         grad_scale = (
-            (
-                (
-                    indicate_small * Qn
-                    + indicate_big * Qp
-                    + indicate_middle * (-q_w + q_w.round())
-                )
-                * grad_output
-                * times
-            )
+            ((indicate_small * Qn + indicate_big * Qp + indicate_middle * (-q_w + q_w.round())) * grad_output * times)
             .sum()
             .unsqueeze(dim=0)
         )
@@ -113,20 +101,10 @@ class AsymLsqQuantizer(torch.autograd.Function):
 
         indicate_small = (q_w < Qn).float()
         indicate_big = (q_w > Qp).float()
-        indicate_middle = (
-            1.0 - indicate_small - indicate_big
-        )  # this is more cpu-friendly than torch.ones(input_.shape)
+        indicate_middle = 1.0 - indicate_small - indicate_big  # this is more cpu-friendly than torch.ones(input_.shape)
 
         grad_scale = (
-            (
-                (
-                    indicate_small * Qn
-                    + indicate_big * Qp
-                    + indicate_middle * (-q_w + q_w.round())
-                )
-                * grad_output
-                * times
-            )
+            ((indicate_small * Qn + indicate_big * Qp + indicate_middle * (-q_w + q_w.round())) * grad_output * times)
             .sum()
             .unsqueeze(dim=0)
         )
@@ -149,9 +127,7 @@ observe_name = [
 ]
 
 
-def observe_grad(
-    grad: torch.Tensor, name, step, time, max=True, min=True, clip_alpha=1, plot=True
-):
+def observe_grad(grad: torch.Tensor, name, step, time, max=True, min=True, clip_alpha=1, plot=True):
     clip_value = int(clip_alpha)
     assert min and max, "you should calculate both min and max value"
     grad_np = grad.cpu().detach().numpy()
@@ -161,9 +137,7 @@ def observe_grad(
         min_threshold = np.partition(flat_grad, clip_value)[clip_value]
         min_grad = flat_grad[flat_grad <= min_threshold]
     if max:
-        max_threshold = np.partition(flat_grad, flat_grad.size - clip_value)[
-            flat_grad.size - clip_value
-        ]
+        max_threshold = np.partition(flat_grad, flat_grad.size - clip_value)[flat_grad.size - clip_value]
         # max_threshold = np.percentile(flat_grad, 100-clip_alpha)
         max_grad = flat_grad[flat_grad >= max_threshold]
     if plot:
@@ -172,9 +146,7 @@ def observe_grad(
         # plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt2/{}/grad/act/{}".format(time, name)):
-            print(
-                "Directory {} created".format("plt2/{}/grad/act/{}".format(time, name))
-            )
+            print("Directory {} created".format("plt2/{}/grad/act/{}".format(time, name)))
 
         os.makedirs("plt2/{}/grad/act/{}".format(time, name), exist_ok=True)
         # if step > 100:
@@ -260,9 +232,7 @@ class gradient_clip(torch.autograd.Function):
         name, step, clip, time = ctx.saved
         if clip > 1e-8:
             if step % 200 == 50 and name in observe_name:
-                min, max = observe_grad(
-                    grad_output, name, step, time=time, clip_alpha=clip, plot=True
-                )
+                min, max = observe_grad(grad_output, name, step, time=time, clip_alpha=clip, plot=True)
                 # min, max = observe_grad(grad_output, name, step, time=time, plot=True)
             else:
                 min, max = observe_outlier(grad_output, clip_alpha=clip)
@@ -327,17 +297,11 @@ class LSQconv2d(nn.Conv2d):
             if not self.first_pass:
                 Qsym = 2 ** (self.num_bits - 1) - 1
                 Qasym = 2**self.num_bits - 1
-                self.scale_weight.data.copy_(
-                    2 * self.weight.abs().mean() / math.sqrt(Qsym) + 1e-10
-                )
+                self.scale_weight.data.copy_(2 * self.weight.abs().mean() / math.sqrt(Qsym) + 1e-10)
                 if self.mode.startswith("quantize_sym"):
-                    self.scale_input.data.copy_(
-                        2 * input.abs().mean() / math.sqrt(Qsym) + 1e-10
-                    )
+                    self.scale_input.data.copy_(2 * input.abs().mean() / math.sqrt(Qsym) + 1e-10)
                 elif self.mode.startswith("quantize_asym"):
-                    self.scale_input.data.copy_(
-                        2 * input.abs().mean() / math.sqrt(Qasym) + 1e-10
-                    )
+                    self.scale_input.data.copy_(2 * input.abs().mean() / math.sqrt(Qasym) + 1e-10)
                 else:
                     raise NotImplementedError
                 print(
@@ -398,20 +362,10 @@ class LSQconv2d(nn.Conv2d):
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt/step_size_conv/input/{}".format(self.start_time)):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/input/{}".format(self.start_time)
-                )
-            )
+            print("Directory {} created".format("plt/step_size_conv/input/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/input/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/input/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/input/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/input/{}/{}.png".format(self.start_time, len(self.iter_track)))
         plt.close()
 
         plt.figure()
@@ -420,18 +374,8 @@ class LSQconv2d(nn.Conv2d):
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt/step_size_conv/weight/{}".format(self.start_time)):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/weight/{}".format(self.start_time)
-                )
-            )
+            print("Directory {} created".format("plt/step_size_conv/weight/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/weight/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/weight/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/weight/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/weight/{}/{}.png".format(self.start_time, len(self.iter_track)))
         plt.close()

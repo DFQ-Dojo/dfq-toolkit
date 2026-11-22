@@ -11,14 +11,25 @@ import torch
 from mmcv import Config, DictAction
 from mmcv.cnn import fuse_conv_bn
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import get_dist_info, init_dist, load_checkpoint, wrap_fp16_model
+from mmcv.runner import (
+    get_dist_info,
+    init_dist,
+    load_checkpoint,
+    wrap_fp16_model,
+)
 from mmdet.apis import multi_gpu_test, single_gpu_test
-from mmdet.datasets import build_dataloader, build_dataset, replace_ImageToTensor
+from mmdet.datasets import (
+    build_dataloader,
+    build_dataset,
+    replace_ImageToTensor,
+)
 from mmdet.models import build_detector
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="MMDet test (and eval) a model")
+    parser = argparse.ArgumentParser(
+        description="MMDet test (and eval) a model"
+    )
     parser.add_argument("config", help="test config file path")
     parser.add_argument("checkpoint", help="checkpoint file")
     parser.add_argument(
@@ -36,7 +47,7 @@ def parse_args():
         "--gpu-ids",
         type=int,
         nargs="+",
-        help="ids of gpus to use " "(only applicable to non-distributed testing)",
+        help="ids of gpus to use (only applicable to non-distributed testing)",
     )
     parser.add_argument(
         "--format-only",
@@ -123,7 +134,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    assert args.out or args.eval or args.format_only or args.show or args.show_dir, (
+    assert (
+        args.out or args.eval or args.format_only or args.show or args.show_dir
+    ), (
         "Please specify at least one operation (save/eval/format/show the "
         'results / save the results) with the argument "--out", "--eval"'
         ', "--format-only", "--show" or "--show-dir"'
@@ -160,7 +173,9 @@ def main():
         samples_per_gpu = cfg.data.test.pop("samples_per_gpu", 1)
         if samples_per_gpu > 1:
             # Replace 'ImageToTensor' to 'DefaultFormatBundle'
-            cfg.data.test.pipeline = replace_ImageToTensor(cfg.data.test.pipeline)
+            cfg.data.test.pipeline = replace_ImageToTensor(
+                cfg.data.test.pipeline
+            )
     elif isinstance(cfg.data.test, list):
         for ds_cfg in cfg.data.test:
             ds_cfg.test_mode = True
@@ -235,7 +250,9 @@ def main():
             device_ids=[torch.cuda.current_device()],
             broadcast_buffers=False,
         )
-        outputs = multi_gpu_test(model, data_loader, args.tmpdir, args.gpu_collect)
+        outputs = multi_gpu_test(
+            model, data_loader, args.tmpdir, args.gpu_collect
+        )
 
     rank, _ = get_dist_info()
     if rank == 0:

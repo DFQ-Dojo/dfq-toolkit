@@ -1,6 +1,6 @@
 from types import MethodType
 import torch.nn as nn
-from mmdet_custom.models.vit import WindowedAttention, Attention
+from mmdet_custom.models.vit import Attention
 from mmdet.models.backbones.swin import WindowMSA
 import math
 
@@ -14,7 +14,9 @@ def attention_forward(self, x, H, W):
         .reshape(B, N, 3, self.num_heads, C // self.num_heads)
         .permute(2, 0, 3, 1, 4)
     )
-    q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+    q, k, v = qkv.unbind(
+        0
+    )  # make torchscript happy (cannot use tensor as tuple)
 
     # attn = (q @ k.transpose(-2, -1)) * self.scale
     attn = self.matmul1(q, k.transpose(-2, -1)) * self.scale
@@ -50,11 +52,15 @@ def deit_window_attn(self, x, H, W):
     qkv = qkv.reshape(B, L, N_, 3, self.num_heads, C // self.num_heads).permute(
         3, 0, 1, 4, 2, 5
     )
-    q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+    q, k, v = qkv.unbind(
+        0
+    )  # make torchscript happy (cannot use tensor as tuple)
 
     # q,k,v [B, L, num_head, N_, C/num_head]
     # attn = (q @ k.transpose(-2, -1)) * self.scale  # [B, L, num_head, N_, N_]
-    attn = self.matmul1(q, k.transpose(-2, -1)) * self.scale  # [B, L, num_head, N_, N_]
+    attn = (
+        self.matmul1(q, k.transpose(-2, -1)) * self.scale
+    )  # [B, L, num_head, N_, N_]
 
     attn = attn.softmax(dim=-1)
     attn = self.attn_drop(attn)  # [B, L, num_head, N_, N_]

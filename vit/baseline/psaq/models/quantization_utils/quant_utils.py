@@ -115,7 +115,9 @@ class AsymmetricQuantFunction(Function):
         scale, zero_point, qmin, qmax = asymmetric_linear_quantization_params(
             k, x_min, x_max
         )
-        scale, zero_point = reshape_tensor(x, scale, zero_point, is_weight=False)
+        scale, zero_point = reshape_tensor(
+            x, scale, zero_point, is_weight=False
+        )
 
         # quantize
         quant_x = x / scale + zero_point

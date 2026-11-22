@@ -31,7 +31,9 @@ def autopad(k, p=None, d=1):
     """
     if d > 1:
         k = (
-            d * (k - 1) + 1 if isinstance(k, int) else [d * (x - 1) + 1 for x in k]
+            d * (k - 1) + 1
+            if isinstance(k, int)
+            else [d * (x - 1) + 1 for x in k]
         )  # actual kernel-size
     if p is None:
         p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
@@ -93,7 +95,17 @@ class LSQConv(nn.Module):
 
     @staticmethod
     def new(
-        self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, num_bits=8, mode="exact"
+        self,
+        c1,
+        c2,
+        k=1,
+        s=1,
+        p=None,
+        g=1,
+        d=1,
+        act=True,
+        num_bits=8,
+        mode="exact",
     ):
         """Initializes a standard convolution layer with optional batch normalization and activation."""
 
@@ -104,7 +116,9 @@ class LSQConv(nn.Module):
         act = (
             self.default_act
             if act is True
-            else act if isinstance(act, nn.Module) else nn.Identity()
+            else act
+            if isinstance(act, nn.Module)
+            else nn.Identity()
         )
 
         return LSQConv(conv, bn, act)
@@ -151,7 +165,6 @@ def lsqconv_from_conv(conv: Conv, mode: QuantizeMode) -> LSQConv:
 
 
 class LSQBottleneck(nn.Module):
-
     def __init__(self, cv1, cv2, add: bool):
         super().__init__()
         self.cv1 = cv1
@@ -301,7 +314,8 @@ def lsqc2f_from_c2f(c2f: C2f, mode: QuantizeMode) -> LSQC2f:
     cv1 = lsqconv_from_conv(c2f.cv1, mode=mode)
     cv2 = lsqconv_from_conv(c2f.cv2, mode=mode)
     m = nn.ModuleList(
-        lsqbottleneck_from_bottleneck(bottleneck, mode=mode) for bottleneck in c2f.m
+        lsqbottleneck_from_bottleneck(bottleneck, mode=mode)
+        for bottleneck in c2f.m
     )
     return LSQC2f(c=c, cv1=cv1, cv2=cv2, m=m)
 
@@ -385,7 +399,10 @@ def lsqc3_from_c3(c3: C3, mode: QuantizeMode):
     cv2 = lsqconv_from_conv(c3.cv2, mode=mode)
     cv3 = lsqconv_from_conv(c3.cv3, mode=mode)
     m = nn.Sequential(
-        *(lsqbottleneck_from_bottleneck(bottleneck, mode=mode) for bottleneck in c3.m)
+        *(
+            lsqbottleneck_from_bottleneck(bottleneck, mode=mode)
+            for bottleneck in c3.m
+        )
     )
     return LSQC3(cv1=cv1, cv2=cv2, cv3=cv3, m=m)
 
@@ -397,14 +414,25 @@ class LSQC3k(LSQC3):
         super().__init__(cv1, cv2, cv3, m)
 
     @staticmethod
-    def new(c1, c2, n=1, shortcut=True, g=1, e=0.5, k=3, num_bits=8, mode="exact"):
+    def new(
+        c1, c2, n=1, shortcut=True, g=1, e=0.5, k=3, num_bits=8, mode="exact"
+    ):
         """Initializes the C3k module with specified channels, number of layers, and configurations."""
-        c3 = super().new(c1, c2, n, shortcut, g, e, num_bits=num_bits, mode=mode)
+        c3 = super().new(
+            c1, c2, n, shortcut, g, e, num_bits=num_bits, mode=mode
+        )
         c_ = int(c2 * e)  # hidden channels
         m = nn.Sequential(
             *(
                 LSQBottleneck.new(
-                    c_, c_, shortcut, g, k=(k, k), e=1.0, num_bits=num_bits, mode=mode
+                    c_,
+                    c_,
+                    shortcut,
+                    g,
+                    k=(k, k),
+                    e=1.0,
+                    num_bits=num_bits,
+                    mode=mode,
                 )
                 for _ in range(n)
             )
@@ -429,7 +457,10 @@ def lsqc3k_from_c3k(c3k: C3k, mode: QuantizeMode) -> LSQC3k:
     cv2 = lsqconv_from_conv(c3k.cv2, mode=mode)
     cv3 = lsqconv_from_conv(c3k.cv3, mode=mode)
     m = nn.Sequential(
-        *(lsqbottleneck_from_bottleneck(bottleneck, mode=mode) for bottleneck in c3k.m)
+        *(
+            lsqbottleneck_from_bottleneck(bottleneck, mode=mode)
+            for bottleneck in c3k.m
+        )
     )
     return LSQC3k(cv1=cv1, cv2=cv2, cv3=cv3, m=m)
 
@@ -453,10 +484,14 @@ class LSQC3k2(LSQC2f):
         mode="exact",
     ):
         """Initializes the C3k2 module, a faster CSP Bottleneck with 2 convolutions and optional C3k blocks."""
-        c2k2 = super().new(c1, c2, n, shortcut, g, e, num_bits=num_bits, mode=mode)
+        c2k2 = super().new(
+            c1, c2, n, shortcut, g, e, num_bits=num_bits, mode=mode
+        )
         m = nn.ModuleList(
             (
-                LSQC3k.new(c2k2.c, c2k2.c, 2, shortcut, g, num_bits=num_bits, mode=mode)
+                LSQC3k.new(
+                    c2k2.c, c2k2.c, 2, shortcut, g, num_bits=num_bits, mode=mode
+                )
                 if c3k
                 else LSQBottleneck.new(
                     c2k2.c, c2k2.c, shortcut, g, num_bits=num_bits, mode=mode
@@ -610,7 +645,9 @@ class LSQAttention(nn.Module):
         h = dim + nh_kd * 2
         qkv = LSQConv.new(dim, h, 1, act=False, num_bits=num_bits, mode=mode)
         proj = LSQConv.new(dim, dim, 1, act=False, num_bits=num_bits, mode=mode)
-        pe = LSQConv.new(dim, dim, 3, 1, g=dim, act=False, num_bits=num_bits, mode=mode)
+        pe = LSQConv.new(
+            dim, dim, 3, 1, g=dim, act=False, num_bits=num_bits, mode=mode
+        )
 
         return LSQAttention(
             num_heads=num_heads,
@@ -714,10 +751,16 @@ class LSQPSABlock(nn.Module):
         self.add = add
 
     @staticmethod
-    def new(c, attn_ratio=0.5, num_heads=4, shortcut=True, num_bits=8, mode="exact"):
+    def new(
+        c, attn_ratio=0.5, num_heads=4, shortcut=True, num_bits=8, mode="exact"
+    ):
         """Initializes the PSABlock with attention and feed-forward layers for enhanced feature extraction."""
         attn = LSQAttention.new(
-            c, attn_ratio=attn_ratio, num_heads=num_heads, num_bits=num_bits, mode=mode
+            c,
+            attn_ratio=attn_ratio,
+            num_heads=num_heads,
+            num_bits=num_bits,
+            mode=mode,
         )
         ffn = nn.Sequential(
             LSQConv.new(c, c * 2, 1, num_bits=num_bits, mode=mode),
@@ -755,7 +798,9 @@ class LSQPSABlock(nn.Module):
         self.ffn[1].end_calibration()
 
 
-def lsqpsablock_from_psablock(psablock: PSABlock, mode: QuantizeMode) -> LSQPSABlock:
+def lsqpsablock_from_psablock(
+    psablock: PSABlock, mode: QuantizeMode
+) -> LSQPSABlock:
     attn = lsqattention_from_attention(psablock.attn, mode=mode)
     ffn = nn.Sequential(
         lsqconv_from_conv(psablock.ffn[0], mode=mode),
@@ -859,6 +904,9 @@ def lsqc2psa_from_c2psa(c2psa: C2PSA, mode: QuantizeMode) -> LSQC2PSA:
     cv1 = lsqconv_from_conv(c2psa.cv1, mode=mode)
     cv2 = lsqconv_from_conv(c2psa.cv2, mode=mode)
     m = nn.Sequential(
-        *(lsqpsablock_from_psablock(psablock, mode=mode) for psablock in c2psa.m)
+        *(
+            lsqpsablock_from_psablock(psablock, mode=mode)
+            for psablock in c2psa.m
+        )
     )
     return LSQC2PSA(c=c, cv1=cv1, cv2=cv2, m=m)

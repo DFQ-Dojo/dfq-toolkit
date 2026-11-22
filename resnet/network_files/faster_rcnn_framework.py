@@ -1,9 +1,9 @@
 import warnings
 from collections import OrderedDict
-from typing import Tuple, List, Dict, Optional, Union
+from typing import Tuple, List
 
 import torch
-from torch import nn, Tensor
+from torch import nn
 import torch.nn.functional as F
 from torchvision.ops import MultiScaleRoIAlign
 
@@ -66,7 +66,9 @@ class FasterRCNNBase(nn.Module):
 
         if self.training:
             assert targets is not None
-            for target in targets:  # 进一步判断传入的target的boxes参数是否符合规定
+            for (
+                target
+            ) in targets:  # 进一步判断传入的target的boxes参数是否符合规定
                 boxes = target["boxes"]
                 if isinstance(boxes, torch.Tensor):
                     if len(boxes.shape) != 2 or boxes.shape[-1] != 4:
@@ -86,7 +88,9 @@ class FasterRCNNBase(nn.Module):
                 assert len(val) == 2  # 防止输入的是个一维向量
                 original_image_sizes.append((val[0], val[1]))
 
-            images, targets = self.transform(images, targets)  # 对图像进行预处理
+            images, targets = self.transform(
+                images, targets
+            )  # 对图像进行预处理
         # print(images.tensors.shape)
         features = self.backbone(images.tensors)  # 将图像输入backbone得到特征图
         if isinstance(
@@ -99,7 +103,9 @@ class FasterRCNNBase(nn.Module):
         # 将特征层以及标注target信息传入rpn中
         # proposals: List[Tensor], Tensor_shape: [num_proposals, 4],
         # 每个proposals是绝对坐标，且为(x1, y1, x2, y2)格式
-        proposals, proposal_losses = self.rpn(images, features, targets, self.distill)
+        proposals, proposal_losses = self.rpn(
+            images, features, targets, self.distill
+        )
 
         # 将rpn生成的数据以及标注target信息传入fast rcnn后半部分
         detections, detector_losses = self.roi_heads(
@@ -313,7 +319,7 @@ class FasterRCNN(FasterRCNNBase):
         if num_classes is not None:
             if box_predictor is not None:
                 raise ValueError(
-                    "num_classes should be None when box_predictor " "is specified"
+                    "num_classes should be None when box_predictor is specified"
                 )
         else:
             if box_predictor is None:
@@ -370,7 +376,12 @@ class FasterRCNN(FasterRCNNBase):
         #  Multi-scale RoIAlign pooling
         if box_roi_pool is None:
             box_roi_pool = MultiScaleRoIAlign(
-                featmap_names=["0", "1", "2", "3"],  # 在哪些特征层进行roi pooling
+                featmap_names=[
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                ],  # 在哪些特征层进行roi pooling
                 output_size=[7, 7],
                 sampling_ratio=2,
             )
@@ -379,7 +390,9 @@ class FasterRCNN(FasterRCNNBase):
         if box_head is None:
             resolution = box_roi_pool.output_size[0]  # 默认等于7
             representation_size = 1024
-            box_head = TwoMLPHead(out_channels * resolution**2, representation_size)
+            box_head = TwoMLPHead(
+                out_channels * resolution**2, representation_size
+            )
 
         # 在box_head的输出上预测部分
         if box_predictor is None:
@@ -408,6 +421,10 @@ class FasterRCNN(FasterRCNNBase):
             image_std = [0.229, 0.224, 0.225]
 
         # 对数据进行标准化，缩放，打包成batch等处理部分
-        transform = GeneralizedRCNNTransform(min_size, max_size, image_mean, image_std)
+        transform = GeneralizedRCNNTransform(
+            min_size, max_size, image_mean, image_std
+        )
 
-        super(FasterRCNN, self).__init__(backbone, rpn, roi_heads, transform, distill)
+        super(FasterRCNN, self).__init__(
+            backbone, rpn, roi_heads, transform, distill
+        )

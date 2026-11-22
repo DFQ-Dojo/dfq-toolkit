@@ -21,9 +21,13 @@ def window_partition(x, window_size: int):
         windows: (num_windows*B, window_size, window_size, C)
     """
     B, H, W, C = x.shape
-    x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
+    x = x.view(
+        B, H // window_size, window_size, W // window_size, window_size, C
+    )
     windows = (
-        x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
+        x.permute(0, 1, 3, 2, 4, 5)
+        .contiguous()
+        .view(-1, window_size, window_size, C)
     )
     return windows
 
@@ -80,7 +84,9 @@ class WindowAttention(nn.Module):
 
         # define a parameter table of relative position bias
         self.relative_position_bias_table = nn.Parameter(
-            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads)
+            torch.zeros(
+                (2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads
+            )
         )  # 2*Wh-1 * 2*Ww-1, nH
 
         # get pair-wise relative position index for each token inside the window
@@ -94,7 +100,9 @@ class WindowAttention(nn.Module):
         relative_coords = relative_coords.permute(
             1, 2, 0
         ).contiguous()  # Wh*Ww, Wh*Ww, 2
-        relative_coords[:, :, 0] += self.window_size[0] - 1  # shift to start from 0
+        relative_coords[:, :, 0] += (
+            self.window_size[0] - 1
+        )  # shift to start from 0
         relative_coords[:, :, 1] += self.window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
@@ -152,9 +160,9 @@ class WindowAttention(nn.Module):
 
         if mask is not None:
             nW = mask.shape[0]
-            attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(
-                1
-            ).unsqueeze(0)
+            attn = attn.view(
+                B_ // nW, nW, self.num_heads, N, N
+            ) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
         else:
@@ -214,9 +222,9 @@ class SwinTransformerBlock(nn.Module):
             # if window size is larger than input resolution, we don't partition windows
             self.shift_size = 0
             self.window_size = min(self.input_resolution)
-        assert (
-            0 <= self.shift_size < self.window_size
-        ), "shift_size must in 0-window_size"
+        assert 0 <= self.shift_size < self.window_size, (
+            "shift_size must in 0-window_size"
+        )
 
         self.norm1 = norm_layer(dim)
         self.qact1 = QuantAct(cfg.activation_bit)
@@ -230,7 +238,9 @@ class SwinTransformerBlock(nn.Module):
             cfg=cfg,
         )
 
-        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = (
+            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        )
         self.qact2 = QuantAct(cfg.activation_bit)
         self.norm2 = norm_layer(dim)
         self.qact3 = QuantAct(cfg.activation_bit)
@@ -265,7 +275,9 @@ class SwinTransformerBlock(nn.Module):
 
             # nW, window_size, window_size, 1
             mask_windows = window_partition(img_mask, self.window_size)
-            mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
+            mask_windows = mask_windows.view(
+                -1, self.window_size * self.window_size
+            )
             attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
             attn_mask = attn_mask.masked_fill(
                 attn_mask != 0, float(-100.0)
@@ -304,13 +316,19 @@ class SwinTransformerBlock(nn.Module):
         attn_windows = self.attn(x_windows, mask=self.attn_mask)
 
         # merge windows
-        attn_windows = attn_windows.view(-1, self.window_size, self.window_size, C)
-        shifted_x = window_reverse(attn_windows, self.window_size, H, W)  # B H' W' C
+        attn_windows = attn_windows.view(
+            -1, self.window_size, self.window_size, C
+        )
+        shifted_x = window_reverse(
+            attn_windows, self.window_size, H, W
+        )  # B H' W' C
 
         # reverse cyclic shift
         if self.shift_size > 0:
             x = torch.roll(
-                shifted_x, shifts=(self.shift_size, self.shift_size), dims=(1, 2)
+                shifted_x,
+                shifts=(self.shift_size, self.shift_size),
+                dims=(1, 2),
             )
         else:
             x = shifted_x
@@ -334,7 +352,9 @@ class PatchMerging(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
     """
 
-    def __init__(self, input_resolution, dim, norm_layer=nn.LayerNorm, cfg=None):
+    def __init__(
+        self, input_resolution, dim, norm_layer=nn.LayerNorm, cfg=None
+    ):
         super().__init__()
         self.input_resolution = input_resolution
         self.dim = dim
@@ -342,7 +362,9 @@ class PatchMerging(nn.Module):
         self.norm = norm_layer(4 * dim)
         self.qact1 = QuantAct(cfg.activation_bit)
         # self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
-        self.reduction = QuantLinear(cfg.weight_bit, 4 * dim, 2 * dim, bias=False)
+        self.reduction = QuantLinear(
+            cfg.weight_bit, 4 * dim, 2 * dim, bias=False
+        )
         self.qact2 = QuantAct(cfg.activation_bit)
 
     def forward(self, x):
@@ -435,7 +457,9 @@ class BasicLayer(nn.Module):
                     drop=drop,
                     attn_drop=attn_drop,
                     drop_path=(
-                        drop_path[i] if isinstance(drop_path, list) else drop_path
+                        drop_path[i]
+                        if isinstance(drop_path, list)
+                        else drop_path
                     ),
                     norm_layer=norm_layer,
                     cfg=cfg,
@@ -573,10 +597,14 @@ class SwinTransformer(nn.Module):
                     qkv_bias=qkv_bias,
                     drop=drop_rate,
                     attn_drop=attn_drop_rate,
-                    drop_path=dpr[sum(depths[:i_layer]) : sum(depths[: i_layer + 1])],
+                    drop_path=dpr[
+                        sum(depths[:i_layer]) : sum(depths[: i_layer + 1])
+                    ],
                     norm_layer=norm_layer,
                     downsample=(
-                        PatchMerging if (i_layer < self.num_layers - 1) else None
+                        PatchMerging
+                        if (i_layer < self.num_layers - 1)
+                        else None
                     ),
                     use_checkpoint=use_checkpoint,
                     cfg=cfg,

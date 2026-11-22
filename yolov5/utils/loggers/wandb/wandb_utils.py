@@ -68,9 +68,7 @@ class WandbLogger:
             self.wandb_run = wandb.run or wandb.init(
                 config=opt,
                 resume="allow",
-                project=(
-                    "YOLOv5" if opt.project == "runs/train" else Path(opt.project).stem
-                ),
+                project=("YOLOv5" if opt.project == "runs/train" else Path(opt.project).stem),
                 entity=opt.entity,
                 name=opt.name if opt.name != "exp" else None,
                 job_type=job_type,
@@ -122,13 +120,9 @@ class WandbLogger:
                 )
 
         if opt.bbox_interval == -1:
-            self.bbox_interval = opt.bbox_interval = (
-                (opt.epochs // 10) if opt.epochs > 10 else 1
-            )
+            self.bbox_interval = opt.bbox_interval = (opt.epochs // 10) if opt.epochs > 10 else 1
             if opt.evolve or opt.noplots:
-                self.bbox_interval = opt.bbox_interval = (
-                    opt.epochs + 1
-                )  # disable bbox_interval
+                self.bbox_interval = opt.bbox_interval = opt.epochs + 1  # disable bbox_interval
 
     def log_model(self, path, opt, epoch, fitness_score, best_model=False):
         """

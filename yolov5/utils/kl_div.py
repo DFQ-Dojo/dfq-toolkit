@@ -33,8 +33,7 @@ class KLDivergence(nn.Module):
 
         accept_reduction = {"none", "batchmean", "sum", "mean"}
         assert reduction in accept_reduction, (
-            f"KLDivergence supports reduction {accept_reduction}, "
-            f"but gets {reduction}."
+            f"KLDivergence supports reduction {accept_reduction}, but gets {reduction}."
         )
         self.reduction = reduction
 
@@ -56,9 +55,7 @@ class KLDivergence(nn.Module):
         for branchS, branchT in zip(preds_S, preds_T):
             softmax_pred_T = F.softmax(branchT / self.tau, dim=1)
             logsoftmax_preds_S = F.log_softmax(branchS / self.tau, dim=1)
-            loss = (self.tau**2) * F.kl_div(
-                logsoftmax_preds_S, softmax_pred_T, reduction=self.reduction
-            )
+            loss = (self.tau**2) * F.kl_div(logsoftmax_preds_S, softmax_pred_T, reduction=self.reduction)
             dLoss.append(loss)
             dLoss_items.append(loss)
         dLoss = sum(dLoss)

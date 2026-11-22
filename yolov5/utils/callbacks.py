@@ -41,9 +41,7 @@ class Callbacks:
             name: The name of the action for later reference
             callback: The callback to fire
         """
-        assert (
-            hook in self._callbacks
-        ), f"hook '{hook}' not found in callbacks {self._callbacks}"
+        assert hook in self._callbacks, f"hook '{hook}' not found in callbacks {self._callbacks}"
         assert callable(callback), f"callback '{callback}' is not callable"
         self._callbacks[hook].append({"name": name, "callback": callback})
 
@@ -67,13 +65,9 @@ class Callbacks:
             kwargs: Keyword Arguments to receive from YOLOv5
         """
 
-        assert (
-            hook in self._callbacks
-        ), f"hook '{hook}' not found in callbacks {self._callbacks}"
+        assert hook in self._callbacks, f"hook '{hook}' not found in callbacks {self._callbacks}"
         for logger in self._callbacks[hook]:
             if thread:
-                threading.Thread(
-                    target=logger["callback"], args=args, kwargs=kwargs, daemon=True
-                ).start()
+                threading.Thread(target=logger["callback"], args=args, kwargs=kwargs, daemon=True).start()
             else:
                 logger["callback"](*args, **kwargs)

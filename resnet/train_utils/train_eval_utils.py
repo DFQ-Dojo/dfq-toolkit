@@ -8,7 +8,6 @@ import train_utils.distributed_utils as utils
 from .coco_eval import EvalCOCOMetric
 from network_files.transform import GeneralizedRCNNTransform
 from typing import Tuple, List
-import os
 
 image_mean = [0.485, 0.456, 0.406]
 image_std = [0.229, 0.224, 0.225]
@@ -32,7 +31,9 @@ def CkptTrain_one_epoch(
 ):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}"))
+    metric_logger.add_meter(
+        "lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}")
+    )
     header = "Epoch: [{}]".format(epoch)
 
     lr_scheduler = None
@@ -42,11 +43,15 @@ def CkptTrain_one_epoch(
         warmup_factor = 1.0 / 1000
         warmup_iters = min(1000, len(ckpt_list) - 1)
 
-        lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
+        lr_scheduler = utils.warmup_lr_scheduler(
+            optimizer, warmup_iters, warmup_factor
+        )
 
     # print('Start training!!!')
     mloss = torch.zeros(1).to(device)  # mean losses
-    for i, ckpts in enumerate(metric_logger.log_every(ckpt_list, print_freq, header)):
+    for i, ckpts in enumerate(
+        metric_logger.log_every(ckpt_list, print_freq, header)
+    ):
         ckpts = torch.load(ckpts, map_location=device)
         images, targets, original_image_sizes = (
             ckpts[train_kind],
@@ -129,7 +134,9 @@ def train_one_epoch(
 ):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}"))
+    metric_logger.add_meter(
+        "lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}")
+    )
     header = "Epoch: [{}]".format(epoch)
 
     lr_scheduler = None
@@ -139,7 +146,9 @@ def train_one_epoch(
         warmup_factor = 1.0 / 1000
         warmup_iters = min(1000, len(data_loader) - 1)
 
-        lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
+        lr_scheduler = utils.warmup_lr_scheduler(
+            optimizer, warmup_iters, warmup_factor
+        )
 
     print("Start training!!!")
     mloss = torch.zeros(1).to(device)  # mean losses
@@ -215,7 +224,9 @@ def evaluate(model, data_loader, device, distill=False, mask_rcnn=True):
     header = "Test: "
 
     det_metric = EvalCOCOMetric(
-        data_loader.dataset.coco, iou_type="bbox", results_file_name="det_results.json"
+        data_loader.dataset.coco,
+        iou_type="bbox",
+        results_file_name="det_results.json",
     )
     if mask_rcnn:
         seg_metric = EvalCOCOMetric(
@@ -227,7 +238,6 @@ def evaluate(model, data_loader, device, distill=False, mask_rcnn=True):
     model.eval()
     with torch.no_grad():
         for image, targets in metric_logger.log_every(data_loader, 100, header):
-
             image = list(img.to(device) for img in image)
 
             # original_image_sizes = torch.jit.annotate(List[Tuple[int, int]], [])
@@ -249,7 +259,9 @@ def evaluate(model, data_loader, device, distill=False, mask_rcnn=True):
             else:
                 outputs = model(image)
 
-            outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+            outputs = [
+                {k: v.to(cpu_device) for k, v in t.items()} for t in outputs
+            ]
             model_time = time.time() - model_time
 
             det_metric.update(targets, outputs)

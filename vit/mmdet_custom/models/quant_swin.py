@@ -90,9 +90,9 @@ class LSQWindowMSA(nn.Module):
 
         if mask is not None:
             nW = mask.shape[0]
-            attn = attn.view(B // nW, nW, self.num_heads, N, N) + mask.unsqueeze(
-                1
-            ).unsqueeze(0)
+            attn = attn.view(
+                B // nW, nW, self.num_heads, N, N
+            ) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
         attn = self.softmax(attn)
 
@@ -110,7 +110,9 @@ class LSQWindowMSA(nn.Module):
         return (seq1[:, None] + seq2[None, :]).reshape(1, -1)
 
 
-def convert_windowmsa(window_msa: WindowMSA, mode: QuantizeMode) -> LSQWindowMSA:
+def convert_windowmsa(
+    window_msa: WindowMSA, mode: QuantizeMode
+) -> LSQWindowMSA:
     return LSQWindowMSA(
         embed_dims=window_msa.embed_dims,
         window_size=window_msa.window_size,
@@ -198,7 +200,9 @@ class LSQShiftWindowMSA(nn.Module):
 
             # nW, window_size, window_size, 1
             mask_windows = self.window_partition(img_mask)
-            mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
+            mask_windows = mask_windows.view(
+                -1, self.window_size * self.window_size
+            )
             attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
             attn_mask = attn_mask.masked_fill(
                 attn_mask != 0, float(-100.0)
@@ -216,14 +220,18 @@ class LSQShiftWindowMSA(nn.Module):
         attn_windows = self.w_msa(query_windows, mask=attn_mask)
 
         # merge windows
-        attn_windows = attn_windows.view(-1, self.window_size, self.window_size, C)
+        attn_windows = attn_windows.view(
+            -1, self.window_size, self.window_size, C
+        )
 
         # B H' W' C
         shifted_x = self.window_reverse(attn_windows, H_pad, W_pad)
         # reverse cyclic shift
         if self.shift_size > 0:
             x = torch.roll(
-                shifted_x, shifts=(self.shift_size, self.shift_size), dims=(1, 2)
+                shifted_x,
+                shifts=(self.shift_size, self.shift_size),
+                dims=(1, 2),
             )
         else:
             x = shifted_x
@@ -262,7 +270,9 @@ class LSQShiftWindowMSA(nn.Module):
         """
         B, H, W, C = x.shape
         window_size = self.window_size
-        x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
+        x = x.view(
+            B, H // window_size, window_size, W // window_size, window_size, C
+        )
         windows = x.permute(0, 1, 3, 2, 4, 5).contiguous()
         windows = windows.view(-1, window_size, window_size, C)
         return windows
@@ -337,7 +347,6 @@ def convert_ffn(ffn: FFN, mode: QuantizeMode) -> LSQFFN:
 
 
 class LSQSwinBlock(nn.Module):
-
     def __init__(self, norm1, attn, norm2, ffn):
         super().__init__()
         self.norm1 = norm1
@@ -405,7 +414,7 @@ class LSQPatchMerging(nn.Module):
         """
         B, L, C = x.shape
         assert isinstance(input_size, Sequence), (
-            f"Expect " f"input_size is " f"`Sequence` " f"but get {input_size}"
+            f"Expect input_size is `Sequence` but get {input_size}"
         )
 
         H, W = input_size
@@ -454,7 +463,6 @@ def convert_patch_merging(
 
 
 class LSQSwinBlockSequence(nn.Module):
-
     def __init__(self, blocks, downsample):
         super().__init__()
 
@@ -489,7 +497,9 @@ def convert_swinblock_seq(
 
     downsample = None
     if isinstance(swinblock_seq.downsample, PatchMerging):
-        downsample = convert_patch_merging(swinblock_seq.downsample, quantize_mode)
+        downsample = convert_patch_merging(
+            swinblock_seq.downsample, quantize_mode
+        )
     elif downsample is None:
         pass
     else:
@@ -499,7 +509,6 @@ def convert_swinblock_seq(
 
 
 class LSQPatchEmbedSwin(nn.Module):
-
     def __init__(self, adap_padding, projection, norm):
         super().__init__()
         self.adap_padding = adap_padding
@@ -534,7 +543,9 @@ class LSQPatchEmbedSwin(nn.Module):
         return x, out_size
 
 
-def convert_patch_embed_swin(pes: PatchEmbed, mode: QuantizeMode) -> LSQPatchEmbedSwin:
+def convert_patch_embed_swin(
+    pes: PatchEmbed, mode: QuantizeMode
+) -> LSQPatchEmbedSwin:
     return LSQPatchEmbedSwin(
         adap_padding=pes.adap_padding,
         projection=convert_conv(pes.projection, mode),
@@ -543,7 +554,6 @@ def convert_patch_embed_swin(pes: PatchEmbed, mode: QuantizeMode) -> LSQPatchEmb
 
 
 class LSQSwinTransformer(nn.Module):
-
     def __init__(
         self,
         convert_weights,
@@ -592,9 +602,8 @@ class LSQSwinTransformer(nn.Module):
             self.drop_after_pos.eval()
 
         for i in range(1, self.frozen_stages + 1):
-
             if (i - 1) in self.out_indices:
-                norm_layer = getattr(self, f"norm{i-1}")
+                norm_layer = getattr(self, f"norm{i - 1}")
                 norm_layer.eval()
                 for param in norm_layer.parameters():
                     param.requires_grad = False
@@ -642,7 +651,9 @@ def convert_swin_transformer(
         out_indices=transformer.out_indices,
         use_abs_pos_embed=transformer.use_abs_pos_embed,
         absolute_pos_embed=(
-            transformer.absolute_pos_embed if transformer.use_abs_pos_embed else None
+            transformer.absolute_pos_embed
+            if transformer.use_abs_pos_embed
+            else None
         ),
         patch_embed=convert_patch_embed_swin(transformer.patch_embed, mode),
         drop_after_pos=transformer.drop_after_pos,

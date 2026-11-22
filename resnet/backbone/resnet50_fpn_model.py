@@ -117,7 +117,6 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):  #
-
     def __init__(
         self,
         block,
@@ -147,10 +146,22 @@ class ResNet(nn.Module):  #
             block, 64, blocks_num[0], a_bits=a_bits, w_bits=w_bits, mode=mode
         )
         self.layer2 = self._make_layer(
-            block, 128, blocks_num[1], stride=2, a_bits=a_bits, w_bits=w_bits, mode=mode
+            block,
+            128,
+            blocks_num[1],
+            stride=2,
+            a_bits=a_bits,
+            w_bits=w_bits,
+            mode=mode,
         )
         self.layer3 = self._make_layer(
-            block, 256, blocks_num[2], stride=2, a_bits=a_bits, w_bits=w_bits, mode=mode
+            block,
+            256,
+            blocks_num[2],
+            stride=2,
+            a_bits=a_bits,
+            w_bits=w_bits,
+            mode=mode,
         )
         self.layer4 = self._make_layer(
             block,
@@ -168,7 +179,9 @@ class ResNet(nn.Module):  #
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+                nn.init.kaiming_normal_(
+                    m.weight, mode="fan_out", nonlinearity="relu"
+                )
 
     def _make_layer(
         self,
@@ -322,9 +335,15 @@ def resnet50_fpn_backbone(
         overwrite_eps(resnet_backbone, 0.0)
 
     if pretrain_path != "":
-        assert os.path.exists(pretrain_path), "{} is not exist.".format(pretrain_path)
+        assert os.path.exists(pretrain_path), "{} is not exist.".format(
+            pretrain_path
+        )
         print("ResNet Network")
-        print(resnet_backbone.load_state_dict(torch.load(pretrain_path), strict=False))
+        print(
+            resnet_backbone.load_state_dict(
+                torch.load(pretrain_path), strict=False
+            )
+        )
 
     # select layers that wont be frozen
     assert 0 <= trainable_layers <= 5
@@ -350,7 +369,9 @@ def resnet50_fpn_backbone(
     return_layers = {f"layer{k}": str(v) for v, k in enumerate(returned_layers)}
 
     in_channels_stage2 = resnet_backbone.in_channel // 8  # 256
-    in_channels_list = [in_channels_stage2 * 2 ** (i - 1) for i in returned_layers]
+    in_channels_list = [
+        in_channels_stage2 * 2 ** (i - 1) for i in returned_layers
+    ]
     out_channels = 256
     return BackboneWithFPN(
         resnet_backbone,

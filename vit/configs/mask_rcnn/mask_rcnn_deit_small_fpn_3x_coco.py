@@ -36,7 +36,10 @@ model = dict(
         pretrained=pretrained,
     ),
     neck=dict(
-        type="FPN", in_channels=[384, 384, 384, 384], out_channels=256, num_outs=5
+        type="FPN",
+        in_channels=[384, 384, 384, 384],
+        out_channels=256,
+        num_outs=5,
     ),
 )
 # optimizer

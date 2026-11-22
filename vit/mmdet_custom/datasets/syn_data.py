@@ -12,17 +12,18 @@ from mmdet.core.mask import BitmapMasks
 
 @DATASETS.register_module()
 class SynDataset(CustomDataset):
-
     CLASSES = CocoDataset.CLASSES
 
     PALETTE = CocoDataset.PALETTE
 
     def __init__(self, syn_dir):
-        assert (
-            syn_dir != ""
-        ), "you should set the syn directory in the commandline interface."
+        assert syn_dir != "", (
+            "you should set the syn directory in the commandline interface."
+        )
 
-        pth_files = [x for x in Path(syn_dir).iterdir() if x.name.endswith(".pt")]
+        pth_files = [
+            x for x in Path(syn_dir).iterdir() if x.name.endswith(".pt")
+        ]
 
         def psaq_collect(ckpt) -> List[dict]:
             total_samples = len(ckpt)
@@ -46,7 +47,9 @@ class SynDataset(CustomDataset):
                     "gt_bboxes": DataContainer(
                         torch.Tensor([[0.0000, 25.8699, 189.7085, 158.4098]])
                     ),
-                    "gt_labels": DataContainer(torch.zeros(1).type(torch.int64)),
+                    "gt_labels": DataContainer(
+                        torch.zeros(1).type(torch.int64)
+                    ),
                     "gt_masks": DataContainer(
                         BitmapMasks(masks, 640, 640), cpu_only=True
                     ),

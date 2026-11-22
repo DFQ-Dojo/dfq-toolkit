@@ -10,7 +10,6 @@ import logging
 
 
 class GenOptions(BaseSettings, cli_parse_args=True, cli_prog_name="Generation"):
-
     work_dir: str = Field(description="places of synthesized data")
 
     img_size: int = Field(description="generate how many images")

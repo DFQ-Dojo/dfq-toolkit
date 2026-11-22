@@ -14,7 +14,8 @@ model = dict(
         norm_eval=True,
         style="caffe",
         init_cfg=dict(
-            type="Pretrained", checkpoint="open-mmlab://detectron2/resnet50_caffe"
+            type="Pretrained",
+            checkpoint="open-mmlab://detectron2/resnet50_caffe",
         ),
     ),
     rpn_head=dict(
@@ -32,7 +33,9 @@ model = dict(
             target_means=[0.0, 0.0, 0.0, 0.0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
         ),
-        loss_cls=dict(type="CrossEntropyLoss", use_sigmoid=True, loss_weight=1.0),
+        loss_cls=dict(
+            type="CrossEntropyLoss", use_sigmoid=True, loss_weight=1.0
+        ),
         loss_bbox=dict(type="L1Loss", loss_weight=1.0),
     ),
     roi_head=dict(
@@ -65,7 +68,9 @@ model = dict(
                 target_stds=[0.1, 0.1, 0.2, 0.2],
             ),
             reg_class_agnostic=False,
-            loss_cls=dict(type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0),
+            loss_cls=dict(
+                type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0
+            ),
             loss_bbox=dict(type="L1Loss", loss_weight=1.0),
         ),
     ),
@@ -125,7 +130,9 @@ model = dict(
             min_bbox_size=0,
         ),
         rcnn=dict(
-            score_thr=0.05, nms=dict(type="nms", iou_threshold=0.5), max_per_img=100
+            score_thr=0.05,
+            nms=dict(type="nms", iou_threshold=0.5),
+            max_per_img=100,
         ),
     ),
 )

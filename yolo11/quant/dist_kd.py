@@ -28,6 +28,7 @@ class DIST(nn.Module):
     https://arxiv.org/abs/2205.10536
 
     """
+
     def __init__(self, beta=1.0, gamma=1.0, tau=1.0):
         """Create a DIST function
 

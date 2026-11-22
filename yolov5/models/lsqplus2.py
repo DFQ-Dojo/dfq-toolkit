@@ -1,4 +1,3 @@
-import copy
 import math
 import torch
 import torch.nn as nn
@@ -38,16 +37,7 @@ class ALSQPlus(Function):
         bigger = (q_w > Qp).float()  # bool值转浮点值，1.0或者0.0
         between = 1.0 - smaller - bigger  # 得到位于量化区间的index
         grad_alpha = (
-            (
-                (
-                    smaller * Qn
-                    + bigger * Qp
-                    + between * Round.apply(q_w)
-                    - between * q_w
-                )
-                * grad_weight
-                * g
-            )
+            ((smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g)
             .sum()
             .unsqueeze(dim=0)
         )
@@ -96,31 +86,11 @@ class WLSQPlus(Function):
         bigger = (q_w > Qp).float()  # bool值转浮点值，1.0或者0.0
         between = 1.0 - smaller - bigger  # 得到位于量化区间的index
         if per_channel:
-            grad_alpha = (
-                (
-                    smaller * Qn
-                    + bigger * Qp
-                    + between * Round.apply(q_w)
-                    - between * q_w
-                )
-                * grad_weight
-                * g
-            )
-            grad_alpha = (
-                grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
-            )
+            grad_alpha = (smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g
+            grad_alpha = grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
         else:
             grad_alpha = (
-                (
-                    (
-                        smaller * Qn
-                        + bigger * Qp
-                        + between * Round.apply(q_w)
-                        - between * q_w
-                    )
-                    * grad_weight
-                    * g
-                )
+                ((smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g)
                 .sum()
                 .unsqueeze(dim=0)
             )
@@ -174,11 +144,7 @@ class LSQPlusActivationQuantizer(nn.Module):
             with torch.no_grad():
                 if self.init_state == 0:
                     self.g = 1.0 / math.sqrt(activation.numel() * self.Qp)
-                    new_s_data = (
-                        torch.mean(torch.abs(activation.detach()))
-                        * 2
-                        / (math.sqrt(self.Qp))
-                    )
+                    new_s_data = torch.mean(torch.abs(activation.detach())) * 2 / (math.sqrt(self.Qp))
                     self.s.data.copy_(new_s_data)
                     self.init_state += 1
                     print(f"initial activation scale to {self.s.data}", end=" ")
@@ -193,9 +159,7 @@ class LSQPlusActivationQuantizer(nn.Module):
             print("！Binary quantization is not supported ！")
             assert self.a_bits != 1
         else:
-            q_a = ALSQPlus.apply(
-                activation, self.s, self.g, self.Qn, self.Qp, self.beta
-            )
+            q_a = ALSQPlus.apply(activation, self.s, self.g, self.Qn, self.Qp, self.beta)
             # print(self.s, self.beta)
         return q_a
 
@@ -226,33 +190,23 @@ class LSQPlusWeightQuantizer(nn.Module):
 
     # 量化/反量化
     def forward(self, weight):
-        assert (
-            self.batch_init == 1 and not self.per_channel
-        ), "error occurs in weight setting"
+        assert self.batch_init == 1 and not self.per_channel, "error occurs in weight setting"
         if self.quantize:
             with torch.no_grad():
                 if self.init_state == 0:
                     self.g = 1.0 / math.sqrt(weight.numel() * self.Qp)
-                    new_s_data = (
-                        torch.mean(torch.abs(weight.detach()))
-                        * 2
-                        / (math.sqrt(self.Qp))
-                    )
+                    new_s_data = torch.mean(torch.abs(weight.detach())) * 2 / (math.sqrt(self.Qp))
                     self.s.data.copy_(new_s_data)
                     self.init_state += 1
                     print(f"initial weight scale to {self.s.data}")
                 elif self.init_state < self.batch_init:
                     self.div = 2**self.w_bits - 1
                     if self.per_channel:
-                        weight_tmp = (
-                            weight.detach().contiguous().view(weight.size()[0], -1)
-                        )
+                        weight_tmp = weight.detach().contiguous().view(weight.size()[0], -1)
                         mean = torch.mean(weight_tmp, dim=1)
                         std = torch.std(weight_tmp, dim=1)
                         self.s.data, _ = torch.max(
-                            torch.stack(
-                                [torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]
-                            ),
+                            torch.stack([torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]),
                             dim=0,
                         )
                         self.s.data = self.s.data * 0.9 + 0.1 * self.s.data / self.div
@@ -261,11 +215,7 @@ class LSQPlusWeightQuantizer(nn.Module):
                         std = torch.std(weight.detach())
                         self.s.data = (
                             self.s.data * 0.9
-                            + 0.1
-                            * max(
-                                [torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]
-                            )
-                            / self.div
+                            + 0.1 * max([torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]) / self.div
                         )
                     self.init_state += 1
                 elif self.init_state == self.batch_init:
@@ -278,9 +228,7 @@ class LSQPlusWeightQuantizer(nn.Module):
             print("！Binary quantization is not supported ！")
             assert self.w_bits != 1
         else:
-            w_q = WLSQPlus.apply(
-                weight, self.s, self.g, self.Qn, self.Qp, self.per_channel
-            )
+            w_q = WLSQPlus.apply(weight, self.s, self.g, self.Qn, self.Qp, self.per_channel)
 
             # alpha = grad_scale(self.s, g)
             # w_q = Round.apply((weight/alpha).clamp(Qn, Qp)) * alpha

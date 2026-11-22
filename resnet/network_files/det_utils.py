@@ -1,7 +1,5 @@
 import torch
 import math
-from typing import List, Tuple
-from torch import Tensor
 
 
 class BalancedPositiveNegativeSampler(object):
@@ -51,8 +49,12 @@ class BalancedPositiveNegativeSampler(object):
 
             # randomly select positive and negative examples
             # Returns a random permutation of integers from 0 to n - 1.
-            perm1 = torch.randperm(positive.numel(), device=positive.device)[:num_pos]
-            perm2 = torch.randperm(negative.numel(), device=negative.device)[:num_neg]
+            perm1 = torch.randperm(positive.numel(), device=positive.device)[
+                :num_pos
+            ]
+            perm2 = torch.randperm(negative.numel(), device=negative.device)[
+                :num_neg
+            ]
 
             pos_idx_per_image = positive[perm1]
             neg_idx_per_image = negative[perm2]
@@ -239,22 +241,26 @@ class BoxCoder(object):
         # xmin
         pred_boxes1 = (
             pred_ctr_x
-            - torch.tensor(0.5, dtype=pred_ctr_x.dtype, device=pred_w.device) * pred_w
+            - torch.tensor(0.5, dtype=pred_ctr_x.dtype, device=pred_w.device)
+            * pred_w
         )
         # ymin
         pred_boxes2 = (
             pred_ctr_y
-            - torch.tensor(0.5, dtype=pred_ctr_y.dtype, device=pred_h.device) * pred_h
+            - torch.tensor(0.5, dtype=pred_ctr_y.dtype, device=pred_h.device)
+            * pred_h
         )
         # xmax
         pred_boxes3 = (
             pred_ctr_x
-            + torch.tensor(0.5, dtype=pred_ctr_x.dtype, device=pred_w.device) * pred_w
+            + torch.tensor(0.5, dtype=pred_ctr_x.dtype, device=pred_w.device)
+            * pred_w
         )
         # ymax
         pred_boxes4 = (
             pred_ctr_y
-            + torch.tensor(0.5, dtype=pred_ctr_y.dtype, device=pred_h.device) * pred_h
+            + torch.tensor(0.5, dtype=pred_ctr_y.dtype, device=pred_h.device)
+            * pred_h
         )
 
         pred_boxes = torch.stack(
@@ -272,7 +278,9 @@ class Matcher(object):
         "BETWEEN_THRESHOLDS": int,
     }
 
-    def __init__(self, high_threshold, low_threshold, allow_low_quality_matches=False):
+    def __init__(
+        self, high_threshold, low_threshold, allow_low_quality_matches=False
+    ):
         # type: (float, float, bool) -> None
         """
         Args:
@@ -339,11 +347,15 @@ class Matcher(object):
 
         if self.allow_low_quality_matches:
             assert all_matches is not None
-            self.set_low_quality_matches_(matches, all_matches, match_quality_matrix)
+            self.set_low_quality_matches_(
+                matches, all_matches, match_quality_matrix
+            )
 
         return matches
 
-    def set_low_quality_matches_(self, matches, all_matches, match_quality_matrix):
+    def set_low_quality_matches_(
+        self, matches, all_matches, match_quality_matrix
+    ):
         """
         Produce additional matches for predictions that have only low-quality matches.
         Specifically, for each ground-truth find the set of predictions that have
@@ -378,7 +390,9 @@ class Matcher(object):
         matches[pre_inds_to_update] = all_matches[pre_inds_to_update]
 
 
-def smooth_l1_loss(input, target, beta: float = 1.0 / 9, size_average: bool = True):
+def smooth_l1_loss(
+    input, target, beta: float = 1.0 / 9, size_average: bool = True
+):
     """
     very similar to the smooth_l1_loss from pytorch, but with
     the extra beta parameter

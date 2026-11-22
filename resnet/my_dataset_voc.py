@@ -11,7 +11,11 @@ from train_utils import convert_to_coco_api
 
 class VOCInstances(Dataset):
     def __init__(
-        self, voc_root, year="2012", txt_name: str = "train.txt", transforms=None
+        self,
+        voc_root,
+        year="2012",
+        txt_name: str = "train.txt",
+        transforms=None,
     ):
         super().__init__()
         if isinstance(year, int):
@@ -27,9 +31,13 @@ class VOCInstances(Dataset):
         mask_dir = os.path.join(root, "SegmentationObject")
 
         txt_path = os.path.join(root, "ImageSets", "Segmentation", txt_name)
-        assert os.path.exists(txt_path), "file '{}' does not exist.".format(txt_path)
+        assert os.path.exists(txt_path), "file '{}' does not exist.".format(
+            txt_path
+        )
         with open(os.path.join(txt_path), "r") as f:
-            file_names = [x.strip() for x in f.readlines() if len(x.strip()) > 0]
+            file_names = [
+                x.strip() for x in f.readlines() if len(x.strip()) > 0
+            ]
 
         # read class_indict
         json_file = "pascal_voc_indices.json"
@@ -60,7 +68,9 @@ class VOCInstances(Dataset):
             with open(xml_path) as fid:
                 xml_str = fid.read()
             xml = etree.fromstring(xml_str)
-            obs_dict = parse_xml_to_dict(xml)["annotation"]  # 将xml文件解析成字典
+            obs_dict = parse_xml_to_dict(xml)[
+                "annotation"
+            ]  # 将xml文件解析成字典
             obs_bboxes = parse_objects(
                 obs_dict, xml_path, self.class_dict, idx
             )  # 解析出目标信息
@@ -165,7 +175,9 @@ def parse_xml_to_dict(xml):
         if child.tag != "object":
             result[child.tag] = child_result[child.tag]
         else:
-            if child.tag not in result:  # 因为object可能有多个，所以需要放入列表里
+            if (
+                child.tag not in result
+            ):  # 因为object可能有多个，所以需要放入列表里
                 result[child.tag] = []
             result[child.tag].append(child_result[child.tag])
     return {xml.tag: result}
@@ -195,7 +207,11 @@ def parse_objects(data: dict, xml_path: str, class_dict: dict, idx: int):
 
         # 进一步检查数据，有的标注信息中可能有w或h为0的情况，这样的数据会导致计算回归loss为nan
         if xmax <= xmin or ymax <= ymin:
-            print("Warning: in '{}' xml, there are some bbox w/h <=0".format(xml_path))
+            print(
+                "Warning: in '{}' xml, there are some bbox w/h <=0".format(
+                    xml_path
+                )
+            )
             continue
 
         boxes.append([xmin, ymin, xmax, ymax])

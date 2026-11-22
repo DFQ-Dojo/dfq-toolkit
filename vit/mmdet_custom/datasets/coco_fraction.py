@@ -32,6 +32,8 @@ class CocoFraction(CocoDataset):
         )
         if dataset_size:
             self.dataset_size = dataset_size
-            print(f"truncating dataset from {len(self.data_infos)} to {dataset_size}")
+            print(
+                f"truncating dataset from {len(self.data_infos)} to {dataset_size}"
+            )
             self.data_infos = self.data_infos[: self.dataset_size]
             self.flag = self.flag[: self.dataset_size]

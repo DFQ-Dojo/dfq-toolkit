@@ -3,11 +3,9 @@ import os
 import datetime
 
 import torch
-from torchvision.ops.misc import FrozenBatchNorm2d
 
 import transforms
 from my_dataset_coco import CocoDetection, custom_collate_fn
-from my_dataset_voc import VOCInstances
 from backbone import resnet50_fpn_backbone
 from network_files import MaskRCNN
 import train_utils.train_eval_utils as utils
@@ -40,7 +38,11 @@ def create_model(
         w_bits=w_bits,
     )
     model = MaskRCNN(
-        backbone, num_classes=num_classes, mode="exact", a_bits=a_bits, w_bits=w_bits
+        backbone,
+        num_classes=num_classes,
+        mode="exact",
+        a_bits=a_bits,
+        w_bits=w_bits,
     )
 
     if load_pretrain_weights:
@@ -107,8 +109,12 @@ def main(args):
 
     print("Creating data loaders")
     if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_dataset
+        )
+        test_sampler = torch.utils.data.distributed.DistributedSampler(
+            val_dataset
+        )
     else:
         train_sampler = torch.utils.data.RandomSampler(train_dataset)
         test_sampler = torch.utils.data.SequentialSampler(val_dataset)
@@ -157,12 +163,17 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[args.gpu]
+        )
         model_without_ddp = model.module
 
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(
-        params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay
+        params,
+        lr=args.lr,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay,
     )
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
@@ -199,7 +210,10 @@ def main(args):
     start_time = time.time()
     # write into txt
     if args.rank in [-1, 0]:
-        with open(det_results_file, "a") as f1, open(seg_results_file, "a") as f2:
+        with (
+            open(det_results_file, "a") as f1,
+            open(seg_results_file, "a") as f2,
+        ):
             header = "{:<10} | {:<10} | {:<10}| {:<10}| {:<10}".format(
                 "Epoch", "mAP", "mAP50", "Loss", "Lr"
             )
@@ -230,7 +244,9 @@ def main(args):
         lr_scheduler.step()
 
         # evaluate after every epoch
-        det_info, seg_info = utils.evaluate(model, data_loader_test, device=device)
+        det_info, seg_info = utils.evaluate(
+            model, data_loader_test, device=device
+        )
 
         # 只在主进程上进行写操作
         early_stop = False
@@ -295,10 +311,12 @@ def main(args):
             }
             if args.amp:
                 save_files["scaler"] = scaler.state_dict()
-            save_on_master(save_files, os.path.join(args.output_dir, f"model_last.pth"))
+            save_on_master(
+                save_files, os.path.join(args.output_dir, "model_last.pth")
+            )
             if best_epoch == epoch:
                 save_on_master(
-                    save_files, os.path.join(args.output_dir, f"model_best.pth")
+                    save_files, os.path.join(args.output_dir, "model_best.pth")
                 )
 
     total_time = time.time() - start_time
@@ -329,7 +347,9 @@ if __name__ == "__main__":
     # 训练设备类型
     parser.add_argument("--device", default="cuda", help="device")
     # 检测目标类别数(不包含背景)
-    parser.add_argument("--num-classes", default=90, type=int, help="num_classes")
+    parser.add_argument(
+        "--num-classes", default=90, type=int, help="num_classes"
+    )
     # 每块GPU上的batch_size
     parser.add_argument(
         "-b",
@@ -339,7 +359,9 @@ if __name__ == "__main__":
         help="images per gpu, the total batch size is $NGPU x batch_size",
     )
     # 指定接着从哪个epoch数开始训练
-    parser.add_argument("--start_epoch", default=0, type=int, help="start epoch")
+    parser.add_argument(
+        "--start_epoch", default=0, type=int, help="start epoch"
+    )
     # 训练的总epoch数
     parser.add_argument(
         "--epochs",
@@ -381,7 +403,10 @@ if __name__ == "__main__":
     )
     # 针对torch.optim.lr_scheduler.StepLR的参数
     parser.add_argument(
-        "--lr-step-size", default=8, type=int, help="decrease lr every step-size epochs"
+        "--lr-step-size",
+        default=8,
+        type=int,
+        help="decrease lr every step-size epochs",
     )
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument(
@@ -399,7 +424,9 @@ if __name__ == "__main__":
         help="decrease lr by a factor of lr-gamma",
     )
     # 训练过程打印信息的频率
-    parser.add_argument("--print-freq", default=50, type=int, help="print frequency")
+    parser.add_argument(
+        "--print-freq", default=50, type=int, help="print frequency"
+    )
     # 文件保存地址
     parser.add_argument(
         "--output-dir", default="./multi_train", help="path where to save"
@@ -411,10 +438,15 @@ if __name__ == "__main__":
 
     # 开启的进程数(注意不是线程)
     parser.add_argument(
-        "--world-size", default=4, type=int, help="number of distributed processes"
+        "--world-size",
+        default=4,
+        type=int,
+        help="number of distributed processes",
     )
     parser.add_argument(
-        "--dist-url", default="env://", help="url used to set up distributed training"
+        "--dist-url",
+        default="env://",
+        help="url used to set up distributed training",
     )
     parser.add_argument(
         "--sync-bn",
@@ -424,11 +456,16 @@ if __name__ == "__main__":
         default=False,
     )
     parser.add_argument(
-        "--pretrain", type=bool, default=True, help="load COCO pretrain weights."
+        "--pretrain",
+        type=bool,
+        default=True,
+        help="load COCO pretrain weights.",
     )
     # 是否使用混合精度训练(需要GPU支持混合精度)
     parser.add_argument(
-        "--amp", default=False, help="Use torch.cuda.amp for mixed precision training"
+        "--amp",
+        default=False,
+        help="Use torch.cuda.amp for mixed precision training",
     )
 
     # QAT Training额外添加参数
@@ -438,12 +475,20 @@ if __name__ == "__main__":
         help="check model's performance after initialization",
     )
     parser.add_argument(
-        "--mode", type=str, default="exact", help="exact or quantize for conv layer"
+        "--mode",
+        type=str,
+        default="exact",
+        help="exact or quantize for conv layer",
     )
     parser.add_argument(
-        "--calibration_size", type=int, default=0, help="Size of Calibration set"
+        "--calibration_size",
+        type=int,
+        default=0,
+        help="Size of Calibration set",
     )
-    parser.add_argument("--seed", type=int, default=0, help="Global training seed")
+    parser.add_argument(
+        "--seed", type=int, default=0, help="Global training seed"
+    )
     parser.add_argument(
         "--num_bits",
         type=int,
@@ -463,7 +508,10 @@ if __name__ == "__main__":
         help="Quantization num bits for weight(If use, drop num_bits)",
     )
     parser.add_argument(
-        "--patience", type=int, default=10, help="Wait epochs before the program ends"
+        "--patience",
+        type=int,
+        default=10,
+        help="Wait epochs before the program ends",
     )
 
     args = parser.parse_args()

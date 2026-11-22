@@ -1,7 +1,3 @@
-from typing import List, Tuple
-from torch import Tensor
-
-
 class ImageList(object):
     """
     Structure that holds a list of images (of possibly

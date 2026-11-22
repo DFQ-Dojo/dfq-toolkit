@@ -117,7 +117,11 @@ def train(
     self.trainer.train(quant_mode=quant_mode)
     # Update model and cfg after training
     if RANK in {-1, 0}:
-        ckpt = self.trainer.best if self.trainer.best.exists() else self.trainer.last
+        ckpt = (
+            self.trainer.best
+            if self.trainer.best.exists()
+            else self.trainer.last
+        )
         self.model, self.ckpt = attempt_load_one_weight(ckpt)
         self.overrides = self.model.args
         self.metrics = getattr(
@@ -134,7 +138,7 @@ def original_train(config: TrainConfig):
     config : TrainConfig
         Please refer to the doc of TrainConfig.
     """
-    
+
     model = YOLO(config.model)
 
     train(

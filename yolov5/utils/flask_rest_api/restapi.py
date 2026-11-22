@@ -33,9 +33,7 @@ def predict(model):
         im = Image.open(io.BytesIO(im_bytes))
 
         if model in models:
-            results = models[model](
-                im, size=640
-            )  # reduce size=320 for faster inference
+            results = models[model](im, size=640)  # reduce size=320 for faster inference
             return results.pandas().xyxy[0].to_json(orient="records")
 
 
@@ -51,8 +49,6 @@ if __name__ == "__main__":
     opt = parser.parse_args()
 
     for m in opt.model:
-        models[m] = torch.hub.load(
-            "ultralytics/yolov5", m, force_reload=True, skip_validation=True
-        )
+        models[m] = torch.hub.load("ultralytics/yolov5", m, force_reload=True, skip_validation=True)
 
     app.run(host="0.0.0.0", port=opt.port)  # debug=True causes Restarting with stat

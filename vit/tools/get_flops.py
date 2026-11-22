@@ -17,7 +17,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train a detector")
     parser.add_argument("config", help="train config file path")
     parser.add_argument(
-        "--shape", type=int, nargs="+", default=[1280, 800], help="input image size"
+        "--shape",
+        type=int,
+        nargs="+",
+        default=[1280, 800],
+        help="input image size",
     )
     parser.add_argument(
         "--cfg-options",
@@ -50,7 +54,9 @@ def window_sa_flops(h, w, dim, window_size):
 
 
 def get_flops(model, input_shape):
-    flops, params = get_model_complexity_info(model, input_shape, as_strings=False)
+    flops, params = get_model_complexity_info(
+        model, input_shape, as_strings=False
+    )
 
     backbone = model.backbone
     backbone_name = type(backbone).__name__
@@ -69,7 +75,6 @@ def get_flops(model, input_shape):
 
 
 if __name__ == "__main__":
-
     args = parse_args()
 
     if len(args.shape) == 1:

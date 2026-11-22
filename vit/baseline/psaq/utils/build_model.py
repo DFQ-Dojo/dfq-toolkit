@@ -1,8 +1,5 @@
-from types import MethodType
 import torch.nn as nn
 import timm
-from timm.models.vision_transformer import Attention
-from timm.models.swin_transformer import WindowAttention
 
 from tools.annotate_model import annotate_model
 
@@ -14,7 +11,9 @@ def attention_forward(self, x):
         .reshape(B, N, 3, self.num_heads, C // self.num_heads)
         .permute(2, 0, 3, 1, 4)
     )
-    q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+    q, k, v = qkv.unbind(
+        0
+    )  # make torchscript happy (cannot use tensor as tuple)
 
     # attn = (q @ k.transpose(-2, -1)) * self.scale
     attn = self.matmul1(q, k.transpose(-2, -1)) * self.scale
@@ -37,7 +36,9 @@ def window_attention_forward(self, x, mask=None):
         .reshape(B_, N, 3, self.num_heads, C // self.num_heads)
         .permute(2, 0, 3, 1, 4)
     )
-    q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+    q, k, v = qkv.unbind(
+        0
+    )  # make torchscript happy (cannot use tensor as tuple)
 
     q = q * self.scale
     # attn = (q @ k.transpose(-2, -1))
@@ -138,6 +139,8 @@ def build_model(name, Pretrained=True):
     )
     backbone_model.backbone.init_weights()
 
-    model = ViTClassifier(backbone=backbone_model.backbone, head=classifier_net.head)
+    model = ViTClassifier(
+        backbone=backbone_model.backbone, head=classifier_net.head
+    )
 
     return annotate_model(model)

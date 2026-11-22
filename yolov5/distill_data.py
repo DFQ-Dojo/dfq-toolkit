@@ -2,7 +2,6 @@ import argparse
 import torch
 import os
 import torch.nn as nn
-import random
 from utils.torch_utils import (
     select_device,
     torch_distributed_zero_first,
@@ -10,7 +9,7 @@ from utils.torch_utils import (
     de_parallel,
 )
 from utils.loss import ComputeLoss
-from utils.utils import lr_cosine_policy, clip
+from utils.utils import lr_cosine_policy
 from utils.dataloaders import create_dataloader
 import numpy as np
 from utils.metrics import ConfusionMatrix, ap_per_class, box_iou
@@ -22,7 +21,6 @@ from utils.general import (
     check_file,
     increment_path,
     colorstr,
-    init_seeds,
     check_dataset,
     init_seeds,
     intersect_dicts,
@@ -36,13 +34,11 @@ from utils.general import (
 import torch.distributed as dist
 import sys
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import timedelta
 import yaml
 from models.yolo import Model
 from utils.downloads import attempt_download
-from utils.loggers import LOGGERS, Loggers
 import torch.optim as optim
-import copy
 import json
 import torchvision.utils as vutils
 import collections
@@ -54,16 +50,12 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
-LOCAL_RANK = int(
-    os.getenv("LOCAL_RANK", -1)
-)  # https://pytorch.org/docs/stable/elastic/run.html
+LOCAL_RANK = int(os.getenv("LOCAL_RANK", -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv("RANK", -1))
 WORLD_SIZE = int(os.getenv("WORLD_SIZE", 1))
 
 
-def metric(
-    inputs, targets, paths, shapes, model, device, nc, plots, work_dir, names, idx
-):
+def metric(inputs, targets, paths, shapes, model, device, nc, plots, work_dir, names, idx):
     def loss_func(output, target):
         compute_loss = ComputeLoss(model)
         loss, loss_item = compute_loss(output, target)
@@ -83,14 +75,10 @@ def metric(
         iou = box_iou(labels[:, 1:], detections[:, :4])
         correct_class = labels[:, 0:1] == detections[:, 5]
         for i in range(len(iouv)):
-            x = torch.where(
-                (iou >= iouv[i]) & correct_class
-            )  # IoU > threshold and classes match
+            x = torch.where((iou >= iouv[i]) & correct_class)  # IoU > threshold and classes match
             if x[0].shape[0]:
                 matches = (
-                    torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1)
-                    .cpu()
-                    .numpy()
+                    torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()
                 )  # [label, detect, iou]
                 if x[0].shape[0] > 1:
                     matches = matches[matches[:, 2].argsort()[::-1]]
@@ -104,16 +92,10 @@ def metric(
         preds, train_out = model(inputs)
         loss, loss_item = loss_func(train_out, targets.to(device))
         nb, _, height, width = inputs.shape
-        targets[:, 2:] *= torch.tensor(
-            (width, height, width, height), device=device
-        )  # to
+        targets[:, 2:] *= torch.tensor((width, height, width, height), device=device)  # to
         lb = []  # for autolabelling
-        preds = non_max_suppression(
-            preds, 0.001, 0.6, labels=lb, multi_label=True, agnostic=False, max_det=300
-        )
-        iouv = torch.linspace(
-            0.5, 0.95, 10, device=device
-        )  # iou vector for mAP@0.5:0.95
+        preds = non_max_suppression(preds, 0.001, 0.6, labels=lb, multi_label=True, agnostic=False, max_det=300)
+        iouv = torch.linspace(0.5, 0.95, 10, device=device)  # iou vector for mAP@0.5:0.95
         niou = iouv.numel()
         stats = []
         seen = 0
@@ -130,34 +112,24 @@ def metric(
 
             if npr == 0:
                 if nl:
-                    stats.append(
-                        (correct, *torch.zeros((2, 0), device=device), labels[:, 0])
-                    )
+                    stats.append((correct, *torch.zeros((2, 0), device=device), labels[:, 0]))
                     if plots:
-                        confusion_matrix.process_batch(
-                            detections=None, labels=labels[:, 0]
-                        )
+                        confusion_matrix.process_batch(detections=None, labels=labels[:, 0])
                 continue
 
             # Predictions
             predn = pred.clone()
-            scale_boxes(
-                inputs[si].shape[1:], predn[:, :4], shape, shapes[si][1]
-            )  # native-space pred
+            scale_boxes(inputs[si].shape[1:], predn[:, :4], shape, shapes[si][1])  # native-space pred
 
             # Evaluate
             if nl:
                 tbox = xywh2xyxy(labels[:, 1:5])  # target boxes
-                scale_boxes(
-                    inputs[si].shape[1:], tbox, shape, shapes[si][1]
-                )  # native-space labels
+                scale_boxes(inputs[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
                 labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
                 correct = process_batch(predn, labelsn, iouv)
                 if plots:
                     confusion_matrix.process_batch(predn, labelsn)
-            stats.append(
-                (correct, pred[:, 4], pred[:, 5], labels[:, 0])
-            )  # (correct, conf, pcls, tcls
+            stats.append((correct, pred[:, 4], pred[:, 5], labels[:, 0]))  # (correct, conf, pcls, tcls
 
         # Plot images
         if plots:
@@ -173,20 +145,14 @@ def metric(
         # Compute metrics
         stats = [torch.cat(x, 0).cpu().numpy() for x in zip(*stats)]  # to numpy
         if len(stats) and stats[0].any():
-            tp, fp, p, r, f1, ap, ap_class = ap_per_class(
-                *stats, plot=False, save_dir=work_dir, names=names
-            )
+            tp, fp, p, r, f1, ap, ap_class = ap_per_class(*stats, plot=False, save_dir=work_dir, names=names)
             ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
             mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
-        nt = np.bincount(
-            stats[3].astype(int), minlength=nc
-        )  # number of targets per class
+        nt = np.bincount(stats[3].astype(int), minlength=nc)  # number of targets per class
         pf = "%22s" + "%11i" * 2 + "%11.3g" * 4  # print format
         LOGGER.info(pf % ("all", seen, nt.sum(), mp, mr, map50, map))
         if nt.sum() == 0:
-            LOGGER.warning(
-                f"WARNING ⚠️ no labels found, can not compute metrics without labels"
-            )
+            LOGGER.warning("WARNING ⚠️ no labels found, can not compute metrics without labels")
     return loss, loss_item, map50, map
 
 
@@ -197,17 +163,9 @@ class Batchhook:
     def hook_fn(self, module, input, output):
         nch = input[0].shape[1]
         mean = input[0].mean([0, 2, 3])
-        var = (
-            input[0]
-            .permute(1, 0, 2, 3)
-            .contiguous()
-            .view([nch, -1])
-            .var(1, unbiased=False)
-        )
+        var = input[0].permute(1, 0, 2, 3).contiguous().view([nch, -1]).var(1, unbiased=False)
 
-        r_feature = torch.norm(module.running_var.data - var, 2) + torch.norm(
-            module.running_mean.data - mean, 2
-        )
+        r_feature = torch.norm(module.running_var.data - var, 2) + torch.norm(module.running_mean.data - mean, 2)
 
         self.r_feature = r_feature
 
@@ -222,9 +180,7 @@ def get_image_prior_losses(inputs_jit):
     diff3 = inputs_jit[:, :, 1:, :-1] - inputs_jit[:, :, :-1, 1:]
     diff4 = inputs_jit[:, :, :-1, :-1] - inputs_jit[:, :, 1:, 1:]
 
-    loss_var_l2 = (
-        torch.norm(diff1) + torch.norm(diff2) + torch.norm(diff3) + torch.norm(diff4)
-    )
+    loss_var_l2 = torch.norm(diff1) + torch.norm(diff2) + torch.norm(diff3) + torch.norm(diff4)
     loss_var_l1 = (
         (diff1.abs() / 255.0).mean()
         + (diff2.abs() / 255.0).mean()
@@ -490,9 +446,7 @@ def distill_data(
         skipfirst = True
 
     # LOGGER.info('generating ditilled data')
-    for idx, (target, img, path, shape) in enumerate(
-        zip(target_list, img_list, path_list, shape_list)
-    ):
+    for idx, (target, img, path, shape) in enumerate(zip(target_list, img_list, path_list, shape_list)):
         best_cost = 1e4
 
         # todo: setup target labels (use targets labels in val set to try first)
@@ -534,8 +488,7 @@ def distill_data(
 
             size = img.size()
             inputs = (
-                torch.randint(high=255, size=size).to(device, non_blocking=True).float()
-                / 255
+                torch.randint(high=255, size=size).to(device, non_blocking=True).float() / 255
             )  # yolo data needs to be [0,1]
             # inputs = img
             inputs.requires_grad = True
@@ -545,9 +498,7 @@ def distill_data(
             elif setting_id == 1:
                 optimizer = optim.Adam([inputs], lr=opt.lr, betas=[0.5, 0.9], eps=1e-8)
             elif setting_id == 2 or setting_id == 3:
-                optimizer = optim.Adam(
-                    [inputs], lr=opt.lr, betas=[0.9, 0.999], eps=1e-8
-                )
+                optimizer = optim.Adam([inputs], lr=opt.lr, betas=[0.9, 0.999], eps=1e-8)
 
             lr_scheduler = lr_cosine_policy(opt.lr, 100, iterations_per_layer)
 
@@ -571,15 +522,8 @@ def distill_data(
                 loss_var_l1, loss_var_l2 = get_image_prior_losses(inputs_jit)
 
                 # batch norm feature loss
-                rescale = [opt.first_bn_multiplier] + [
-                    1.0 for _ in range(len(hook_handles) - 1)
-                ]
-                loss_r_feature = sum(
-                    [
-                        mod.r_feature * rescale[idx]
-                        for (idx, mod) in enumerate(hook_handles)
-                    ]
-                )
+                rescale = [opt.first_bn_multiplier] + [1.0 for _ in range(len(hook_handles) - 1)]
+                loss_r_feature = sum([mod.r_feature * rescale[idx] for (idx, mod) in enumerate(hook_handles)])
 
                 # l2 loss on images
                 loss_l2 = torch.norm(inputs_jit.view(bs, -1), dim=1).mean()
@@ -608,12 +552,8 @@ def distill_data(
                             "iteration": iteration,
                             "loss": loss.item(),
                             "r_feature_loss": loss_r_feature.item(),
-                            "main_loss": compute_loss(train_out, target.to(device))[
-                                0
-                            ].item(),
-                            "sep_loss": compute_loss(train_out, target.to(device))[
-                                1
-                            ].tolist(),
+                            "main_loss": compute_loss(train_out, target.to(device))[0].item(),
+                            "sep_loss": compute_loss(train_out, target.to(device))[1].tolist(),
                         }
                     )
 
@@ -636,14 +576,14 @@ def distill_data(
                 if do_save and iteration % save_every == 0 and (save_every > 0):
                     vutils.save_image(
                         inputs,
-                        f"{prefix}/generated_images/output{int(iteration/save_every)}_gpu{LOCAL_RANK}.png",
+                        f"{prefix}/generated_images/output{int(iteration / save_every)}_gpu{LOCAL_RANK}.png",
                         normalize=True,
                         scale_each=True,
                         nrow=int(10),
                     )
                     LOGGER.info(f"iteration {iteration}, best step {best_step}")
                     if verifier:
-                        save_dir = f"{prefix}/generated_images/batch{int(iteration/save_every)}"
+                        save_dir = f"{prefix}/generated_images/batch{int(iteration / save_every)}"
                         os.makedirs(save_dir, exist_ok=True)
                         metric_loss, loss_item, map50, map = metric(
                             inputs.clone(),
@@ -658,9 +598,7 @@ def distill_data(
                             verifier.names,
                             0,
                         )
-                        LOGGER.info(
-                            f"loss is {metric_loss}, items are {loss_item}, map50 is {map50}, map is {map}"
-                        )
+                        LOGGER.info(f"loss is {metric_loss}, items are {loss_item}, map50 is {map50}, map is {map}")
 
                 iteration += 1
             # save best image
@@ -724,18 +662,12 @@ def distill_data(
 
 
 def load_model(ckpt, weights, cfg, hyp, nc, device, names, opt):
-    model = Model(
-        cfg or ckpt["model"].yaml, ch=3, nc=nc, anchors=hyp.get("anchors")
-    ).to(
-        device
-    )  # create
+    model = Model(cfg or ckpt["model"].yaml, ch=3, nc=nc, anchors=hyp.get("anchors")).to(device)  # create
     exclude = ["anchor"] if (cfg or hyp.get("anchors")) else []  # exclude keys
     csd = ckpt["model"].float().state_dict()  # checkpoint state_dict as FP32
     csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect
     model.load_state_dict(csd, strict=False)  # load
-    LOGGER.info(
-        f"Transferred {len(csd)}/{len(model.state_dict())} items from {weights}"
-    )  # report
+    LOGGER.info(f"Transferred {len(csd)}/{len(model.state_dict())} items from {weights}")  # report
 
     cuda = device.type != "cpu"
 
@@ -784,9 +716,7 @@ def debug(verifier, save_dir, device):
             Path(save_dir),
             verifier.names,
         )
-        LOGGER.info(
-            f"Best evaluation: loss is {metric_loss}, items are {loss_item}, map50 is {map50}, map is {map}"
-        )
+        LOGGER.info(f"Best evaluation: loss is {metric_loss}, items are {loss_item}, map50 is {map50}, map is {map}")
 
 
 def prepare(
@@ -810,9 +740,7 @@ def prepare(
     if isinstance(hyp, str):
         with open(hyp, errors="ignore") as f:
             hyp = yaml.safe_load(f)  # load hyps dict
-    LOGGER.info(
-        colorstr("hyperparameters: ") + ", ".join(f"{k}={v}" for k, v in hyp.items())
-    )
+    LOGGER.info(colorstr("hyperparameters: ") + ", ".join(f"{k}={v}" for k, v in hyp.items()))
     opt.hyp = hyp.copy()  # for saving hyps to checkpoints
 
     # Config
@@ -822,17 +750,13 @@ def prepare(
     train_path, val_path = data_dict["train"], data_dict["val"]
     nc = int(data_dict["nc"])  # number of classes
     names = data_dict["names"]  # class names
-    is_coco = isinstance(val_path, str) and val_path.endswith(
-        "coco/val2017.txt"
-    )  # COCO dataset
+    is_coco = isinstance(val_path, str) and val_path.endswith("coco/val2017.txt")  # COCO dataset
 
     check_suffix(weights, ".pt")  # check weights
     assert weights.endswith(".pt"), "weigths should be pretrained ckpt!"
     with torch_distributed_zero_first(LOCAL_RANK):
         weights = attempt_download(weights)  # download if not found locally
-    ckpt = torch.load(
-        weights, map_location="cpu"
-    )  # load checkpoint to CPU to avoid CUDA memory leak
+    ckpt = torch.load(weights, map_location="cpu")  # load checkpoint to CPU to avoid CUDA memory leak
 
     model, imgsz, gs = load_model(ckpt, weights, cfg, hyp, nc, device, names, opt)
 
@@ -873,15 +797,11 @@ def prepare(
     #     pad=0.5,
     #     prefix=colorstr("val: "),
     # )
-    model.class_weights = (
-        labels_to_class_weights(dataset.labels, nc).to(device) * nc
-    )  # attach class weights
+    model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc  # attach class weights
     verifier = None
     if opt.verifier:
         verifier, _, _ = load_model(ckpt, weights, cfg, hyp, nc, device, names, opt)
-        verifier.class_weights = (
-            labels_to_class_weights(dataset.labels, nc).to(device) * nc
-        )  # attach class weights
+        verifier.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc  # attach class weights
         verifier.eval()
 
     img_list, target_list, path_list, shape_list = [], [], [], []
@@ -899,9 +819,7 @@ def prepare(
 def parse_opt():
     parser = argparse.ArgumentParser(description="distill data")
     parser.add_argument("--cfg", type=str, default="", help="model.yaml path")
-    parser.add_argument(
-        "--weights", type=str, default=ROOT / "yolov5s.pt", help="initial weights path"
-    )
+    parser.add_argument("--weights", type=str, default=ROOT / "yolov5s.pt", help="initial weights path")
     parser.add_argument("--epochs", type=int, default=10, help="total training epochs")
     parser.add_argument(
         "--hyp",
@@ -909,16 +827,10 @@ def parse_opt():
         default=ROOT / "data/hyps/hyp.scratch-low.yaml",
         help="hyperparameters path",
     )
-    parser.add_argument(
-        "--data", type=str, default=ROOT / "data/coco128.yaml", help="dataset.yaml path"
-    )
-    parser.add_argument(
-        "--project", default=ROOT / "runs/Distill", help="save to project/name"
-    )
+    parser.add_argument("--data", type=str, default=ROOT / "data/coco128.yaml", help="dataset.yaml path")
+    parser.add_argument("--project", default=ROOT / "runs/Distill", help="save to project/name")
     parser.add_argument("--name", default="exp", help="save to project/name")
-    parser.add_argument(
-        "--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu"
-    )
+    parser.add_argument("--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
     parser.add_argument(
         "--batch-size",
         type=int,
@@ -934,21 +846,15 @@ def parse_opt():
         default=640,
         help="train, val image size (pixels)",
     )
-    parser.add_argument(
-        "--lr", type=float, default=0.2, help="learning rate for optimization"
-    )
-    parser.add_argument(
-        "--do_flip", action="store_true", help="apply flip during model inversion"
-    )
+    parser.add_argument("--lr", type=float, default=0.2, help="learning rate for optimization")
+    parser.add_argument("--do_flip", action="store_true", help="apply flip during model inversion")
     parser.add_argument(
         "--first_bn_multiplier",
         type=float,
         default=10.0,
         help="additional multiplier on first bn layer of R_feature",
     )
-    parser.add_argument(
-        "--l2", type=float, default=0.00001, help="l2 loss on the image"
-    )
+    parser.add_argument("--l2", type=float, default=0.00001, help="l2 loss on the image")
     parser.add_argument(
         "--r_feature",
         type=float,
@@ -985,9 +891,7 @@ def parse_opt():
         default=8,
         help="max dataloader workers (per RANK in DDP mode)",
     )
-    parser.add_argument(
-        "--verifier", action="store_true", help="evaluate batch with another model"
-    )
+    parser.add_argument("--verifier", action="store_true", help="evaluate batch with another model")
     parser.add_argument(
         "--patience",
         type=int,
@@ -1016,24 +920,16 @@ def main():
         str(opt.weights),
         str(opt.project),
     )
-    assert len(opt.cfg) or len(
-        opt.weights
-    ), "either --cfg or --weights must be specified"
+    assert len(opt.cfg) or len(opt.weights), "either --cfg or --weights must be specified"
     opt.save_dir = str(increment_path(Path(opt.project) / opt.name, exist_ok=False))
 
     # DDP mode
     device = select_device(opt.device, batch_size=opt.batch_size)
     if LOCAL_RANK != -1:
         msg = "is not compatible with YOLOv5 Multi-GPU DDP training"
-        assert (
-            opt.batch_size != -1
-        ), f"AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size"
-        assert (
-            opt.batch_size % WORLD_SIZE == 0
-        ), f"--batch-size {opt.batch_size} must be multiple of WORLD_SIZE"
-        assert (
-            torch.cuda.device_count() > LOCAL_RANK
-        ), "insufficient CUDA devices for DDP command"
+        assert opt.batch_size != -1, f"AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size"
+        assert opt.batch_size % WORLD_SIZE == 0, f"--batch-size {opt.batch_size} must be multiple of WORLD_SIZE"
+        assert torch.cuda.device_count() > LOCAL_RANK, "insufficient CUDA devices for DDP command"
         torch.cuda.set_device(LOCAL_RANK)
         device = torch.device("cuda", LOCAL_RANK)
         dist.init_process_group(

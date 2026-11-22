@@ -8,7 +8,9 @@ import torch.nn.functional as F
 
 
 @torch.no_grad()
-def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix=""):
+def load_weights_from_npz(
+    model, url, check_hash=False, progress=False, prefix=""
+):
     """Load weights from .npz checkpoints for official Google Brain Flax implementation"""
 
     def _n2p(w, t=True):
@@ -40,7 +42,9 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
         if not os.path.exists(cached_file):
             hash_prefix = None
             if check_hash:
-                r = torch.hub.HASH_REGEX.search(filename)  # r is Optional[Match[str]]
+                r = torch.hub.HASH_REGEX.search(
+                    filename
+                )  # r is Optional[Match[str]]
                 hash_prefix = r.group(1) if r else None
             torch.hub.download_url_to_file(
                 url, cached_file, hash_prefix, progress=progress
@@ -62,12 +66,16 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
                 conv_weight = conv_weight.sum(dim=1, keepdim=True)
         elif in_chans != 3:
             if I != 3:
-                raise NotImplementedError("Weight format not supported by conversion.")
+                raise NotImplementedError(
+                    "Weight format not supported by conversion."
+                )
             else:
                 # NOTE this strategy should be better than random init, but there could be other combinations of
                 # the original RGB input layer weights that'd work better for specific cases.
                 repeat = int(math.ceil(in_chans / 3))
-                conv_weight = conv_weight.repeat(1, repeat, 1, 1)[:, :in_chans, :, :]
+                conv_weight = conv_weight.repeat(1, repeat, 1, 1)[
+                    :, :in_chans, :, :
+                ]
                 conv_weight *= 3 / float(in_chans)
         conv_weight = conv_weight.to(conv_type)
         return conv_weight
@@ -77,7 +85,10 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
         # https://github.com/google-research/vision_transformer/blob/00883dd691c63a6830751563748663526e811cee/vit_jax/checkpoint.py#L224
         ntok_new = posemb_new.shape[1]
         if num_tokens:
-            posemb_tok, posemb_grid = posemb[:, :num_tokens], posemb[0, num_tokens:]
+            posemb_tok, posemb_grid = (
+                posemb[:, :num_tokens],
+                posemb[0, num_tokens:],
+            )
             ntok_new -= num_tokens
         else:
             posemb_tok, posemb_grid = posemb[:, :0], posemb[0]
@@ -85,7 +96,9 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
         if not len(gs_new):  # backwards compatibility
             gs_new = [int(math.sqrt(ntok_new))] * 2
         assert len(gs_new) >= 2
-        posemb_grid = posemb_grid.reshape(1, gs_old, gs_old, -1).permute(0, 3, 1, 2)
+        posemb_grid = posemb_grid.reshape(1, gs_old, gs_old, -1).permute(
+            0, 3, 1, 2
+        )
         posemb_grid = F.interpolate(
             posemb_grid, size=gs_new, mode="bicubic", align_corners=False
         )
@@ -95,7 +108,9 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
         posemb = torch.cat([posemb_tok, posemb_grid], dim=1)
         return posemb
 
-    cached_file = _download_cached_file(url, check_hash=check_hash, progress=progress)
+    cached_file = _download_cached_file(
+        url, check_hash=check_hash, progress=progress
+    )
 
     w = np.load(cached_file)
     if not prefix and "opt/target/embedding/kernel" in w:
@@ -134,16 +149,21 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
                         block.downsample.norm.weight.copy_(
                             _n2p(w[f"{bp}gn_proj/scale"])
                         )
-                        block.downsample.norm.bias.copy_(_n2p(w[f"{bp}gn_proj/bias"]))
+                        block.downsample.norm.bias.copy_(
+                            _n2p(w[f"{bp}gn_proj/bias"])
+                        )
         embed_conv_w = _n2p(w[f"{prefix}embedding/kernel"])
     else:
         embed_conv_w = adapt_input_conv(
-            model.patch_embed.proj.weight.shape[1], _n2p(w[f"{prefix}embedding/kernel"])
+            model.patch_embed.proj.weight.shape[1],
+            _n2p(w[f"{prefix}embedding/kernel"]),
         )
     model.patch_embed.proj.weight.copy_(embed_conv_w)
     model.patch_embed.proj.bias.copy_(_n2p(w[f"{prefix}embedding/bias"]))
     model.cls_token.copy_(_n2p(w[f"{prefix}cls"], t=False))
-    pos_embed_w = _n2p(w[f"{prefix}Transformer/posembed_input/pos_embedding"], t=False)
+    pos_embed_w = _n2p(
+        w[f"{prefix}Transformer/posembed_input/pos_embedding"], t=False
+    )
     if pos_embed_w.shape != model.pos_embed.shape:
         pos_embed_w = resize_pos_embed(  # resize pos embedding when different size from pretrained weights
             pos_embed_w,
@@ -187,7 +207,9 @@ def load_weights_from_npz(model, url, check_hash=False, progress=False, prefix="
                 ]
             )
         )
-        block.attn.proj.weight.copy_(_n2p(w[f"{mha_prefix}out/kernel"]).flatten(1))
+        block.attn.proj.weight.copy_(
+            _n2p(w[f"{mha_prefix}out/kernel"]).flatten(1)
+        )
         block.attn.proj.bias.copy_(_n2p(w[f"{mha_prefix}out/bias"]))
         for r in range(2):
             getattr(block.mlp, f"fc{r + 1}").weight.copy_(

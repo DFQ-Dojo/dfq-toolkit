@@ -2,20 +2,20 @@ import os
 import datetime
 
 import torch
-from torchvision.ops.misc import FrozenBatchNorm2d
 
 import transforms
 from network_files import MaskRCNN
 from backbone import resnet50_fpn_backbone
 from my_dataset_coco import CocoDetection, custom_collate_fn
-from my_dataset_voc import VOCInstances
 from train_utils import train_eval_utils as utils
 from train_utils import GroupedBatchSampler, create_aspect_ratio_groups
 from torch.utils.data import Subset
 from train_utils.distributed_utils import init_seeds
 
 
-def create_model(num_classes, load_pretrain_weights=True, mode="exact", num_bits=8):
+def create_model(
+    num_classes, load_pretrain_weights=True, mode="exact", num_bits=8
+):
     # 如果GPU显存很小，batch_size不能设置很大，建议将norm_layer设置成FrozenBatchNorm2d(默认是nn.BatchNorm2d)
     # FrozenBatchNorm2d的功能与BatchNorm2d类似，但参数无法更新
     # trainable_layers包括['layer4', 'layer3', 'layer2', 'layer1', 'conv1']， 5代表全部训练
@@ -23,16 +23,21 @@ def create_model(num_classes, load_pretrain_weights=True, mode="exact", num_bits
     #                                  trainable_layers=3)
     # resnet50 imagenet weights url: https://download.pytorch.org/models/resnet50-0676ba61.pth
     backbone = resnet50_fpn_backbone(
-        pretrain_path="resnet50.pth", trainable_layers=3, mode=mode, num_bits=num_bits
+        pretrain_path="resnet50.pth",
+        trainable_layers=3,
+        mode=mode,
+        num_bits=num_bits,
     )
 
-    model = MaskRCNN(backbone, num_classes=num_classes, mode="exact", num_bits=num_bits)
+    model = MaskRCNN(
+        backbone, num_classes=num_classes, mode="exact", num_bits=num_bits
+    )
 
     if load_pretrain_weights:
         # coco weights url: "https://download.pytorch.org/models/maskrcnn_resnet50_fpn_coco-bf2d0c1e.pth"
-        weights_dict = torch.load("./mask_rcnn_weights.pth", map_location="cpu")[
-            "model"
-        ]
+        weights_dict = torch.load(
+            "./mask_rcnn_weights.pth", map_location="cpu"
+        )["model"]
         # for k in list(weights_dict.keys()):
         #     if ("box_predictor" in k) or ("mask_fcn_logits" in k):
         #         del weights_dict[k]
@@ -151,7 +156,10 @@ def main(args):
     # define optimizer
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(
-        params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay
+        params,
+        lr=args.lr,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay,
     )
 
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
@@ -196,8 +204,13 @@ def main(args):
         lr_scheduler.step()
 
         # evaluate on the test dataset
-        det_info, seg_info = utils.evaluate(model, val_data_loader, device=device)
-        with open(det_results_file, "a") as f1, open(seg_results_file, "a") as f2:
+        det_info, seg_info = utils.evaluate(
+            model, val_data_loader, device=device
+        )
+        with (
+            open(det_results_file, "a") as f1,
+            open(seg_results_file, "a") as f2,
+        ):
             header = "{:<10} | {:<10} | {:<10}| {:<10}| {:<10}".format(
                 "Epoch", "mAP", "mAP50", "Loss", "Lr"
             )
@@ -210,9 +223,9 @@ def main(args):
         with open(det_results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             # 只需要写入mAP / mAP50
-            result_info = [f"{i:.4f}" for i in det_info[:2] + [mean_loss.item()]] + [
-                f"{lr:.6f}"
-            ]
+            result_info = [
+                f"{i:.4f}" for i in det_info[:2] + [mean_loss.item()]
+            ] + [f"{lr:.6f}"]
             txt = "{:<10} | {:<10} | {:<10} | {:<10} | {:<10}".format(
                 epoch, *result_info
             )
@@ -221,9 +234,9 @@ def main(args):
         # write seg into txt
         with open(seg_results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
-            result_info = [f"{i:.4f}" for i in seg_info[:2] + [mean_loss.item()]] + [
-                f"{lr:.6f}"
-            ]
+            result_info = [
+                f"{i:.4f}" for i in seg_info[:2] + [mean_loss.item()]
+            ] + [f"{lr:.6f}"]
             txt = "{:<10} | {:<10} | {:<10} | {:<10} | {:<10}".format(
                 epoch, *result_info
             )
@@ -265,15 +278,21 @@ if __name__ == "__main__":
     # 训练数据集的根目录
     parser.add_argument("--data-path", default="/data/coco2017", help="dataset")
     # 检测目标类别数(不包含背景)
-    parser.add_argument("--num-classes", default=90, type=int, help="num_classes")
+    parser.add_argument(
+        "--num-classes", default=90, type=int, help="num_classes"
+    )
     # 文件保存地址
     parser.add_argument(
         "--output-dir", default="./save_weights", help="path where to save"
     )
     # 若需要接着上次训练，则指定上次训练保存权重文件地址
-    parser.add_argument("--resume", default="", type=str, help="resume from checkpoint")
+    parser.add_argument(
+        "--resume", default="", type=str, help="resume from checkpoint"
+    )
     # 指定接着从哪个epoch数开始训练
-    parser.add_argument("--start_epoch", default=0, type=int, help="start epoch")
+    parser.add_argument(
+        "--start_epoch", default=0, type=int, help="start epoch"
+    )
     # 训练的总epoch数
     parser.add_argument(
         "--epochs",
@@ -329,11 +348,16 @@ if __name__ == "__main__":
     )
     parser.add_argument("--aspect-ratio-group-factor", default=3, type=int)
     parser.add_argument(
-        "--pretrain", type=bool, default=True, help="load COCO pretrain weights."
+        "--pretrain",
+        type=bool,
+        default=True,
+        help="load COCO pretrain weights.",
     )
     # 是否使用混合精度训练(需要GPU支持混合精度)
     parser.add_argument(
-        "--amp", default=False, help="Use torch.cuda.amp for mixed precision training"
+        "--amp",
+        default=False,
+        help="Use torch.cuda.amp for mixed precision training",
     )
 
     # QAT Training额外添加参数
@@ -343,12 +367,20 @@ if __name__ == "__main__":
         help="check model's performance after initialization",
     )
     parser.add_argument(
-        "--mode", type=str, default="exact", help="exact or quantize for conv layer"
+        "--mode",
+        type=str,
+        default="exact",
+        help="exact or quantize for conv layer",
     )
     parser.add_argument(
-        "--calibration_size", type=int, default=0, help="Size of Calibration set"
+        "--calibration_size",
+        type=int,
+        default=0,
+        help="Size of Calibration set",
     )
-    parser.add_argument("--seed", type=int, default=0, help="Global training seed")
+    parser.add_argument(
+        "--seed", type=int, default=0, help="Global training seed"
+    )
     parser.add_argument(
         "--num_bits",
         type=int,

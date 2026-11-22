@@ -70,7 +70,9 @@ class ViTBaseline(TIMMVisionTransformer):
             1, self.pretrain_size[0] // 16, self.pretrain_size[1] // 16, -1
         ).permute(0, 3, 1, 2)
         pos_embed = (
-            F.interpolate(pos_embed, size=(H, W), mode="bicubic", align_corners=False)
+            F.interpolate(
+                pos_embed, size=(H, W), mode="bicubic", align_corners=False
+            )
             .reshape(1, -1, H * W)
             .permute(0, 2, 1)
         )

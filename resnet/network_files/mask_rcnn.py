@@ -154,7 +154,9 @@ class MaskRCNN(FasterRCNN):
 
         if mask_roi_pool is None:
             mask_roi_pool = MultiScaleRoIAlign(
-                featmap_names=["0", "1", "2", "3"], output_size=14, sampling_ratio=2
+                featmap_names=["0", "1", "2", "3"],
+                output_size=14,
+                sampling_ratio=2,
             )
 
         if mask_head is None:
@@ -221,7 +223,9 @@ class MaskRCNN(FasterRCNN):
 
 
 class MaskRCNNHeads(nn.Sequential):
-    def __init__(self, in_channels, layers, dilation, mode="exact", a_bits=8, w_bits=8):
+    def __init__(
+        self, in_channels, layers, dilation, mode="exact", a_bits=8, w_bits=8
+    ):
         """
         Args:
             in_channels (int): number of input channels
@@ -260,7 +264,9 @@ class MaskRCNNHeads(nn.Sequential):
         # initial params
         for name, param in self.named_parameters():
             if "weight" in name and "scale" not in name:
-                nn.init.kaiming_normal_(param, mode="fan_out", nonlinearity="relu")
+                nn.init.kaiming_normal_(
+                    param, mode="fan_out", nonlinearity="relu"
+                )
 
 
 class MaskRCNNPredictor(nn.Sequential):
@@ -273,11 +279,16 @@ class MaskRCNNPredictor(nn.Sequential):
                         nn.ConvTranspose2d(in_channels, dim_reduced, 2, 2, 0),
                     ),
                     ("relu", nn.ReLU(inplace=True)),
-                    ("mask_fcn_logits", nn.Conv2d(dim_reduced, num_classes, 1, 1, 0)),
+                    (
+                        "mask_fcn_logits",
+                        nn.Conv2d(dim_reduced, num_classes, 1, 1, 0),
+                    ),
                 ]
             )
         )
         # initial params
         for name, param in self.named_parameters():
             if "weight" in name:
-                nn.init.kaiming_normal_(param, mode="fan_out", nonlinearity="relu")
+                nn.init.kaiming_normal_(
+                    param, mode="fan_out", nonlinearity="relu"
+                )

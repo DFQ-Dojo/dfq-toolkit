@@ -7,7 +7,7 @@ import random
 import cv2
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, distributed
+from torch.utils.data import DataLoader
 
 from ..augmentations import augment_hsv, copy_paste, letterbox
 from ..dataloaders import (
@@ -45,9 +45,7 @@ def create_dataloader(
     seed=0,
 ):
     if rect and shuffle:
-        LOGGER.warning(
-            "WARNING ⚠️ --rect is incompatible with DataLoader shuffle, setting shuffle=False"
-        )
+        LOGGER.warning("WARNING ⚠️ --rect is incompatible with DataLoader shuffle, setting shuffle=False")
         shuffle = False
     with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
         dataset = LoadImagesAndLabelsAndMasks(
@@ -70,13 +68,9 @@ def create_dataloader(
 
     batch_size = min(batch_size, len(dataset))
     nd = torch.cuda.device_count()  # number of CUDA devices
-    nw = min(
-        [os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers]
-    )  # number of workers
+    nw = min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = None if rank == -1 else SmartDistributedSampler(dataset, shuffle=shuffle)
-    loader = (
-        DataLoader if image_weights else InfiniteDataLoader
-    )  # only DataLoader allows for attribute updates
+    loader = DataLoader if image_weights else InfiniteDataLoader  # only DataLoader allows for attribute updates
     generator = torch.Generator()
     generator.manual_seed(6148914691236517205 + seed + RANK)
     return (
@@ -87,11 +81,7 @@ def create_dataloader(
             num_workers=nw,
             sampler=sampler,
             pin_memory=True,
-            collate_fn=(
-                LoadImagesAndLabelsAndMasks.collate_fn4
-                if quad
-                else LoadImagesAndLabelsAndMasks.collate_fn
-            ),
+            collate_fn=(LoadImagesAndLabelsAndMasks.collate_fn4 if quad else LoadImagesAndLabelsAndMasks.collate_fn),
             worker_init_fn=seed_worker,
             generator=generator,
         ),
@@ -154,21 +144,14 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
 
             # MixUp augmentation
             if random.random() < hyp["mixup"]:
-                img, labels, segments = mixup(
-                    img,
-                    labels,
-                    segments,
-                    *self.load_mosaic(random.randint(0, self.n - 1))
-                )
+                img, labels, segments = mixup(img, labels, segments, *self.load_mosaic(random.randint(0, self.n - 1)))
 
         else:
             # Load image
             img, (h0, w0), (h, w) = self.load_image(index)
 
             # Letterbox
-            shape = (
-                self.batch_shapes[self.batch[index]] if self.rect else self.img_size
-            )  # final letterboxed shape
+            shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
             img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
             shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
 
@@ -185,9 +168,7 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
                         padh=pad[1],
                     )
             if labels.size:  # normalized xywh to pixel xyxy format
-                labels[:, 1:] = xywhn2xyxy(
-                    labels[:, 1:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1]
-                )
+                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1])
 
             if self.augment:
                 img, labels, segments = random_perspective(
@@ -203,9 +184,7 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
 
         nl = len(labels)  # number of labels
         if nl:
-            labels[:, 1:5] = xyxy2xywhn(
-                labels[:, 1:5], w=img.shape[1], h=img.shape[0], clip=True, eps=1e-3
-            )
+            labels[:, 1:5] = xyxy2xywhn(labels[:, 1:5], w=img.shape[1], h=img.shape[0], clip=True, eps=1e-3)
             if self.overlap:
                 masks, sorted_idx = polygons2masks_overlap(
                     img.shape[:2], segments, downsample_ratio=self.downsample_ratio
@@ -270,23 +249,17 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
         """Loads 1 image + 3 random images into a 4-image YOLOv5 mosaic, adjusting labels and segments accordingly."""
         labels4, segments4 = [], []
         s = self.img_size
-        yc, xc = (
-            int(random.uniform(-x, 2 * s + x)) for x in self.mosaic_border
-        )  # mosaic center x, y
+        yc, xc = (int(random.uniform(-x, 2 * s + x)) for x in self.mosaic_border)  # mosaic center x, y
 
         # 3 additional image indices
-        indices = [index] + random.choices(
-            self.indices, k=3
-        )  # 3 additional image indices
+        indices = [index] + random.choices(self.indices, k=3)  # 3 additional image indices
         for i, index in enumerate(indices):
             # Load image
             img, _, (h, w) = self.load_image(index)
 
             # place img in img4
             if i == 0:  # top left
-                img4 = np.full(
-                    (s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8
-                )  # base image with 4 tiles
+                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
                 x1a, y1a, x2a, y2a = (
                     max(xc - w, 0),
                     max(yc - h, 0),
@@ -316,9 +289,7 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
             labels, segments = self.labels[index].copy(), self.segments[index].copy()
 
             if labels.size:
-                labels[:, 1:] = xywhn2xyxy(
-                    labels[:, 1:], w, h, padw, padh
-                )  # normalized xywh to pixel xyxy format
+                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
                 segments = [xyn2xy(x, w, h, padw, padh) for x in segments]
             labels4.append(labels)
             segments4.extend(segments)
@@ -330,9 +301,7 @@ class LoadImagesAndLabelsAndMasks(LoadImagesAndLabels):  # for training/testing
         # img4, labels4 = replicate(img4, labels4)  # replicate
 
         # Augment
-        img4, labels4, segments4 = copy_paste(
-            img4, labels4, segments4, p=self.hyp["copy_paste"]
-        )
+        img4, labels4, segments4 = copy_paste(img4, labels4, segments4, p=self.hyp["copy_paste"])
         img4, labels4, segments4 = random_perspective(
             img4,
             labels4,
@@ -386,9 +355,7 @@ def polygons2masks(img_size, polygons, color, downsample_ratio=1):
     """
     masks = []
     for si in range(len(polygons)):
-        mask = polygon2mask(
-            img_size, [polygons[si].reshape(-1)], color, downsample_ratio
-        )
+        mask = polygon2mask(img_size, [polygons[si].reshape(-1)], color, downsample_ratio)
         masks.append(mask)
     return np.array(masks)
 

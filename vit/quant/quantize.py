@@ -8,7 +8,9 @@ from quant.lsqplus import QuantLinearPlus, QuantConv2dPlus
 
 
 def _build_inner_conv(c1, c2, k, s, p, g, d, bias, mode: QuantizeMode):
-    if mode.kind == "exact" or (mode.weight_bits == 32 and mode.activation_bits == 32):
+    if mode.kind == "exact" or (
+        mode.weight_bits == 32 and mode.activation_bits == 32
+    ):
         return nn.Conv2d(
             in_channels=c1,
             out_channels=c2,
@@ -68,8 +70,12 @@ def convert_conv(conv: nn.Conv2d, mode: QuantizeMode):
 
 
 def _build_inner_linear(in_features, out_features, bias, mode: QuantizeMode):
-    if mode.kind == "exact" or (mode.weight_bits == 32 and mode.activation_bits == 32):
-        return nn.Linear(in_features=in_features, out_features=out_features, bias=bias)
+    if mode.kind == "exact" or (
+        mode.weight_bits == 32 and mode.activation_bits == 32
+    ):
+        return nn.Linear(
+            in_features=in_features, out_features=out_features, bias=bias
+        )
     if mode.kind == "quantize_sym":
         return LSQLinear(
             in_features=in_features,

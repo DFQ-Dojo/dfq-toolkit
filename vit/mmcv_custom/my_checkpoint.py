@@ -77,7 +77,9 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
         )
     if missing_keys:
         err_msg.append(
-            "missing keys in source state_dict: {}\n".format(", ".join(missing_keys))
+            "missing keys in source state_dict: {}\n".format(
+                ", ".join(missing_keys)
+            )
         )
     err_msg = "\n".join(err_msg)
     if err_msg:
@@ -89,7 +91,9 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
             print(err_msg)
 
 
-def my_load_checkpoint(model, filename, map_location=None, strict=False, logger=None):
+def my_load_checkpoint(
+    model, filename, map_location=None, strict=False, logger=None
+):
     """Load checkpoint from a file or URI.
 
     Args:
@@ -108,7 +112,9 @@ def my_load_checkpoint(model, filename, map_location=None, strict=False, logger=
         import torchvision
 
         model_urls = dict()
-        for _, name, ispkg in pkgutil.walk_packages(torchvision.models.__path__):
+        for _, name, ispkg in pkgutil.walk_packages(
+            torchvision.models.__path__
+        ):
             if not ispkg:
                 _zoo = import_module("torchvision.models.{}".format(name))
                 if hasattr(_zoo, "model_urls"):
@@ -177,14 +183,19 @@ def save_checkpoint(model, filename, optimizer=None, meta=None):
     if meta is None:
         meta = {}
     elif not isinstance(meta, dict):
-        raise TypeError("meta must be a dict or None, but got {}".format(type(meta)))
+        raise TypeError(
+            "meta must be a dict or None, but got {}".format(type(meta))
+        )
     meta.update(mmcv_version=mmcv.__version__, time=time.asctime())
 
     mmcv.mkdir_or_exist(osp.dirname(filename))
     if hasattr(model, "module"):
         model = model.module
 
-    checkpoint = {"meta": meta, "state_dict": weights_to_cpu(model.state_dict())}
+    checkpoint = {
+        "meta": meta,
+        "state_dict": weights_to_cpu(model.state_dict()),
+    }
     if optimizer is not None:
         checkpoint["optimizer"] = optimizer.state_dict()
 

@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch.nn.functional as F
 import torch
 
 
@@ -24,5 +23,7 @@ class MSE(nn.Module):
                 continue
             dLoss.append(torch.mean((branchS - branchT) ** 2))
         dLoss = sum(dLoss) / len(dLoss)
-        dLoss_items = torch.tensor((0.0, 0.0, 0.0, dLoss.item())).to(dLoss.device)
+        dLoss_items = torch.tensor((0.0, 0.0, 0.0, dLoss.item())).to(
+            dLoss.device
+        )
         return dLoss, dLoss_items.detach()

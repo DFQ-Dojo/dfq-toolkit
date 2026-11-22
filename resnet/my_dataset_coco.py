@@ -5,7 +5,10 @@ import torch
 from PIL import Image
 import torch.utils.data as data
 from pycocotools.coco import COCO
-from train_utils import coco_remove_images_without_annotations, convert_coco_poly_mask
+from train_utils import (
+    coco_remove_images_without_annotations,
+    convert_coco_poly_mask,
+)
 
 
 class CocoDetection(data.Dataset):
@@ -20,16 +23,18 @@ class CocoDetection(data.Dataset):
 
     def __init__(self, root, dataset="train", transforms=None, years="2017"):
         super(CocoDetection, self).__init__()
-        assert dataset in ["train", "val"], 'dataset must be in ["train", "val"]'
+        assert dataset in ["train", "val"], (
+            'dataset must be in ["train", "val"]'
+        )
         anno_file = f"instances_{dataset}{years}.json"
         assert os.path.exists(root), "file '{}' does not exist.".format(root)
         self.img_root = os.path.join(root, "images", f"{dataset}{years}")
-        assert os.path.exists(self.img_root), "path '{}' does not exist.".format(
-            self.img_root
+        assert os.path.exists(self.img_root), (
+            "path '{}' does not exist.".format(self.img_root)
         )
         self.anno_path = os.path.join(root, "annotations", anno_file)
-        assert os.path.exists(self.anno_path), "file '{}' does not exist.".format(
-            self.anno_path
+        assert os.path.exists(self.anno_path), (
+            "file '{}' does not exist.".format(self.anno_path)
         )
 
         self.mode = dataset
@@ -38,7 +43,9 @@ class CocoDetection(data.Dataset):
 
         # 获取coco数据索引与类别名称的关系
         # 注意在object80中的索引并不是连续的，虽然只有80个类别，但索引还是按照stuff91来排序的
-        data_classes = dict([(v["id"], v["name"]) for k, v in self.coco.cats.items()])
+        data_classes = dict(
+            [(v["id"], v["name"]) for k, v in self.coco.cats.items()]
+        )
         max_index = max(data_classes.keys())  # 90
         assert max_index == 90, "COCO index not match!"
         # 将缺失的类别名称设置成N/A

@@ -2,7 +2,6 @@ import torch
 from utils.dataloaders import create_dataloader
 import os
 import argparse
-import json
 from utils.general import (
     colorstr,
     check_yaml,
@@ -14,7 +13,7 @@ import random
 from utils.torch_utils import (
     torch_distributed_zero_first,
 )
-from utils.plots import plot_images, plot_boxes
+from utils.plots import plot_images
 import yaml
 import sys
 from pathlib import Path
@@ -37,9 +36,7 @@ def parse_opt(known=False):
         default=ROOT / "data/hyps/hyp.scratch-low.yaml",
         help="hyperparameters path",
     )
-    parser.add_argument(
-        "--data", type=str, default=ROOT / "data/coco.yaml", help="dataset.yaml path"
-    )
+    parser.add_argument("--data", type=str, default=ROOT / "data/coco.yaml", help="dataset.yaml path")
     parser.add_argument(
         "--single-cls",
         action="store_true",
@@ -119,9 +116,7 @@ for i, (imgs, targets, paths, shapes) in enumerate(val_loader):
         cls = random.randint(0, 80)
         tmp = torch.tensor([j, cls, x, y, w, h])
         targets_constrcuct = torch.cat([targets_constrcuct, tmp.unsqueeze(0)], dim=0)
-    plot_images(
-        imgs, targets_constrcuct, paths, f"./plt/tmp2/batchTest{i}/pic.png", names
-    )
+    plot_images(imgs, targets_constrcuct, paths, f"./plt/tmp2/batchTest{i}/pic.png", names)
     if i >= 2:
         break
     pass

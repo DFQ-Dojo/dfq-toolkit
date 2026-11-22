@@ -1,4 +1,3 @@
-from itertools import repeat
 from collections import OrderedDict
 from functools import partial
 
@@ -9,7 +8,11 @@ from .quantization_utils import QuantLinear, QuantConv2d, QuantAct
 from .layers_quant import PatchEmbed, HybridEmbed, Mlp, DropPath, trunc_normal_
 
 
-__all__ = ["deit_tiny_patch16_224", "deit_small_patch16_224", "deit_base_patch16_224"]
+__all__ = [
+    "deit_tiny_patch16_224",
+    "deit_small_patch16_224",
+    "deit_base_patch16_224",
+]
 
 
 class Attention(nn.Module):
@@ -90,7 +93,9 @@ class Block(nn.Module):
             cfg=cfg,
         )
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = (
+            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        )
         self.qact2 = QuantAct(cfg.activation_bit)
         self.norm2 = norm_layer(dim)
         self.qact3 = QuantAct(cfg.activation_bit)
@@ -167,7 +172,9 @@ class VisionTransformer(nn.Module):
         num_patches = self.patch_embed.num_patches
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
+        self.pos_embed = nn.Parameter(
+            torch.zeros(1, num_patches + 1, embed_dim)
+        )
         self.pos_drop = nn.Dropout(p=drop_rate)
 
         self.qact_embed = QuantAct(cfg.activation_bit)

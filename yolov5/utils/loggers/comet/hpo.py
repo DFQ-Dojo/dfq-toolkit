@@ -21,9 +21,7 @@ from utils.torch_utils import select_device
 
 # Project Configuration
 config = comet_ml.config.get_config()
-COMET_PROJECT_NAME = config.get_string(
-    os.getenv("COMET_PROJECT_NAME"), "comet.project_name", default="yolov5"
-)
+COMET_PROJECT_NAME = config.get_string(os.getenv("COMET_PROJECT_NAME"), "comet.project_name", default="yolov5")
 
 
 def get_args(known=False):
@@ -31,13 +29,9 @@ def get_args(known=False):
     hyperparameters, and more.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--weights", type=str, default=ROOT / "yolov5s.pt", help="initial weights path"
-    )
+    parser.add_argument("--weights", type=str, default=ROOT / "yolov5s.pt", help="initial weights path")
     parser.add_argument("--cfg", type=str, default="", help="model.yaml path")
-    parser.add_argument(
-        "--data", type=str, default=ROOT / "data/coco128.yaml", help="dataset.yaml path"
-    )
+    parser.add_argument("--data", type=str, default=ROOT / "data/coco128.yaml", help="dataset.yaml path")
     parser.add_argument(
         "--hyp",
         type=str,
@@ -67,15 +61,9 @@ def get_args(known=False):
         default=False,
         help="resume most recent training",
     )
-    parser.add_argument(
-        "--nosave", action="store_true", help="only save final checkpoint"
-    )
-    parser.add_argument(
-        "--noval", action="store_true", help="only validate final epoch"
-    )
-    parser.add_argument(
-        "--noautoanchor", action="store_true", help="disable AutoAnchor"
-    )
+    parser.add_argument("--nosave", action="store_true", help="only save final checkpoint")
+    parser.add_argument("--noval", action="store_true", help="only validate final epoch")
+    parser.add_argument("--noautoanchor", action="store_true", help="disable AutoAnchor")
     parser.add_argument("--noplots", action="store_true", help="save no plot files")
     parser.add_argument(
         "--evolve",
@@ -97,12 +85,8 @@ def get_args(known=False):
         action="store_true",
         help="use weighted image selection for training",
     )
-    parser.add_argument(
-        "--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu"
-    )
-    parser.add_argument(
-        "--multi-scale", action="store_true", help="vary img-size +/- 50%%"
-    )
+    parser.add_argument("--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
+    parser.add_argument("--multi-scale", action="store_true", help="vary img-size +/- 50%%")
     parser.add_argument(
         "--single-cls",
         action="store_true",
@@ -126,9 +110,7 @@ def get_args(known=False):
         default=8,
         help="max dataloader workers (per RANK in DDP mode)",
     )
-    parser.add_argument(
-        "--project", default=ROOT / "runs/train", help="save to project/name"
-    )
+    parser.add_argument("--project", default=ROOT / "runs/train", help="save to project/name")
     parser.add_argument("--name", default="exp", help="save to project/name")
     parser.add_argument(
         "--exist-ok",
@@ -137,9 +119,7 @@ def get_args(known=False):
     )
     parser.add_argument("--quad", action="store_true", help="quad dataloader")
     parser.add_argument("--cos-lr", action="store_true", help="cosine LR scheduler")
-    parser.add_argument(
-        "--label-smoothing", type=float, default=0.0, help="Label smoothing epsilon"
-    )
+    parser.add_argument("--label-smoothing", type=float, default=0.0, help="Label smoothing epsilon")
     parser.add_argument(
         "--patience",
         type=int,
@@ -195,17 +175,13 @@ def get_args(known=False):
         type=str,
         help="Comet: Path to a Comet Optimizer Config File.",
     )
-    parser.add_argument(
-        "--comet_optimizer_id", type=str, help="Comet: ID of the Comet Optimizer sweep."
-    )
+    parser.add_argument("--comet_optimizer_id", type=str, help="Comet: ID of the Comet Optimizer sweep.")
     parser.add_argument(
         "--comet_optimizer_objective",
         type=str,
         help="Comet: Set to 'minimize' or 'maximize'.",
     )
-    parser.add_argument(
-        "--comet_optimizer_metric", type=str, help="Comet: Metric to Optimize."
-    )
+    parser.add_argument("--comet_optimizer_metric", type=str, help="Comet: Metric to Optimize.")
     parser.add_argument(
         "--comet_optimizer_workers",
         type=int,
@@ -218,15 +194,9 @@ def get_args(known=False):
 
 def run(parameters, opt):
     """Executes YOLOv5 training with given hyperparameters and options, setting up device and training directories."""
-    hyp_dict = {
-        k: v for k, v in parameters.items() if k not in ["epochs", "batch_size"]
-    }
+    hyp_dict = {k: v for k, v in parameters.items() if k not in ["epochs", "batch_size"]}
 
-    opt.save_dir = str(
-        increment_path(
-            Path(opt.project) / opt.name, exist_ok=opt.exist_ok or opt.evolve
-        )
-    )
+    opt.save_dir = str(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok or opt.evolve))
     opt.batch_size = parameters.get("batch_size")
     opt.epochs = parameters.get("epochs")
 

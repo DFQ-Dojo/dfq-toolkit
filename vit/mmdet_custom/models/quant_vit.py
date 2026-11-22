@@ -55,7 +55,6 @@ def convert_lsq_patch_embed(
 
 
 class LSQAttention(nn.Module):
-
     def __init__(self, num_heads, scale, qkv, attn_drop, proj, proj_drop):
         super().__init__()
         self.num_heads = num_heads
@@ -78,7 +77,9 @@ class LSQAttention(nn.Module):
             .reshape(B, N, 3, self.num_heads, C // self.num_heads)
             .permute(2, 0, 3, 1, 4)
         )
-        q, k, v = qkv.unbind(0)  # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv.unbind(
+            0
+        )  # make torchscript happy (cannot use tensor as tuple)
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
@@ -102,7 +103,6 @@ def convert_lsq_attention(attn: Attention, mode: QuantizeMode) -> LSQAttention:
 
 
 class LSQMlp(nn.Module):
-
     def __init__(self, fc1, act, fc2, drop):
         super().__init__()
         self.fc1 = fc1
@@ -204,10 +204,14 @@ def convert_lsq_block(block: Block, mode: QuantizeMode) -> LSQBlock:
     )
 
 
-def convert_lsq_blocks(blocks: nn.Sequential, mode: QuantizeMode) -> nn.Sequential:
+def convert_lsq_blocks(
+    blocks: nn.Sequential, mode: QuantizeMode
+) -> nn.Sequential:
     return nn.Sequential(
         *[
-            convert_lsq_block(block, mode) if isinstance(block, Block) else block
+            convert_lsq_block(block, mode)
+            if isinstance(block, Block)
+            else block
             for block in blocks
         ]
     )
@@ -259,7 +263,9 @@ class LSQViTBaseline(nn.Module):
             1, self.pretrain_size[0] // 16, self.pretrain_size[1] // 16, -1
         ).permute(0, 3, 1, 2)
         pos_embed = (
-            F.interpolate(pos_embed, size=(H, W), mode="bicubic", align_corners=False)
+            F.interpolate(
+                pos_embed, size=(H, W), mode="bicubic", align_corners=False
+            )
             .reshape(1, -1, H * W)
             .permute(0, 2, 1)
         )

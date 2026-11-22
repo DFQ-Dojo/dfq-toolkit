@@ -94,8 +94,12 @@ def _resize_image_and_masks(
     if fixed_size is not None:
         size = [fixed_size[1], fixed_size[0]]
     else:
-        min_size = torch.min(im_shape).to(dtype=torch.float32)  # 获取高宽中的最小值
-        max_size = torch.max(im_shape).to(dtype=torch.float32)  # 获取高宽中的最大值
+        min_size = torch.min(im_shape).to(
+            dtype=torch.float32
+        )  # 获取高宽中的最小值
+        max_size = torch.max(im_shape).to(
+            dtype=torch.float32
+        )  # 获取高宽中的最大值
         scale = torch.min(
             self_min_size / min_size, self_max_size / max_size
         )  # 计算缩放比例
@@ -128,9 +132,7 @@ def _resize_image_and_masks(
             size=size,
             scale_factor=scale_factor,
             recompute_scale_factor=recompute_scale_factor,
-        )[
-            :, 0
-        ].byte()  # self.byte() is equivalent to self.to(torch.uint8).
+        )[:, 0].byte()  # self.byte() is equivalent to self.to(torch.uint8).
         target["masks"] = mask
 
     return image, target
@@ -188,7 +190,9 @@ def expand_masks_tracing_scale(M, padding):
 def expand_masks(mask, padding):
     # type: (Tensor, int) -> Tuple[Tensor, float]
     M = mask.shape[-1]
-    if torch._C._get_tracing_state():  # could not import is_tracing(), not sure why
+    if (
+        torch._C._get_tracing_state()
+    ):  # could not import is_tracing(), not sure why
         scale = expand_masks_tracing_scale(M, padding)
     else:
         scale = float(M + 2 * padding) / M
@@ -213,7 +217,9 @@ def paste_mask_in_image(mask, box, im_h, im_w):
     )  # -1 means not changing the size of that dimension
 
     # Resize mask
-    mask = F.interpolate(mask, size=(h, w), mode="bilinear", align_corners=False)
+    mask = F.interpolate(
+        mask, size=(h, w), mode="bilinear", align_corners=False
+    )
     mask = mask[0][0]  # [batch, C, H, W] -> [H, W]
 
     im_mask = torch.zeros((im_h, im_w), dtype=mask.dtype, device=mask.device)
@@ -246,7 +252,9 @@ def paste_masks_in_image(masks, boxes, img_shape, padding=1):
             torch.scalar_tensor(im_h, dtype=torch.int64),
             torch.scalar_tensor(im_w, dtype=torch.int64),
         )[:, None]
-    res = [paste_mask_in_image(m[0], b, im_h, im_w) for m, b in zip(masks, boxes)]
+    res = [
+        paste_mask_in_image(m[0], b, im_h, im_w) for m, b in zip(masks, boxes)
+    ]
     if len(res) > 0:
         ret = torch.stack(res, dim=0)[:, None]  # [num_obj, 1, H, W]
     else:
@@ -448,7 +456,9 @@ class GeneralizedRCNNTransform(nn.Module):
             zip(result, image_shapes, original_image_sizes)
         ):
             boxes = pred["boxes"]
-            boxes = resize_boxes(boxes, im_s, o_im_s)  # 将bboxes缩放回原图像尺度上
+            boxes = resize_boxes(
+                boxes, im_s, o_im_s
+            )  # 将bboxes缩放回原图像尺度上
             result[i]["boxes"] = boxes
             if "masks" in pred:
                 masks = pred["masks"]

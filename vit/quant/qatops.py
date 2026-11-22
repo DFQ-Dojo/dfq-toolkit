@@ -28,8 +28,8 @@ class SymLsqQuantizer(torch.autograd.Function):
         Qn = -(2 ** (num_bits - 1))
         Qp = 2 ** (num_bits - 1) - 1
 
-        assert scale.min() > 0, "step size = {:.6f} becomes non-positive".format(
-            scale.item()
+        assert scale.min() > 0, (
+            "step size = {:.6f} becomes non-positive".format(scale.item())
         )
         times = 1.0 / math.sqrt(input.numel() * Qp)
         ctx.save_for_backward(input, scale)
@@ -92,7 +92,9 @@ class AsymLsqQuantizer(torch.autograd.Function):
         # asymmetric: make sure input \in [0, +\inf], remember to add it back
         min_val = input.min().item()
         input_ = input - min_val
-        assert scale.min() > 0, "step size = {:.6f} becomes non-positive".format(scale)
+        assert scale.min() > 0, (
+            "step size = {:.6f} becomes non-positive".format(scale)
+        )
         times = 1.0 / math.sqrt(input.numel() * Qp)
         ctx.save_for_backward(input_, scale)
         ctx.other = times, Qn, Qp
@@ -150,7 +152,14 @@ observe_name = [
 
 
 def observe_grad(
-    grad: torch.Tensor, name, step, time, max=True, min=True, clip_alpha=1, plot=True
+    grad: torch.Tensor,
+    name,
+    step,
+    time,
+    max=True,
+    min=True,
+    clip_alpha=1,
+    plot=True,
 ):
     clip_value = int(clip_alpha)
     assert min and max, "you should calculate both min and max value"
@@ -170,7 +179,9 @@ def observe_grad(
 
         if not os.path.exists("plt2/{}/grad/act/{}".format(time, name)):
             print(
-                "Directory {} created".format("plt2/{}/grad/act/{}".format(time, name))
+                "Directory {} created".format(
+                    "plt2/{}/grad/act/{}".format(time, name)
+                )
             )
 
         os.makedirs("plt2/{}/grad/act/{}".format(time, name), exist_ok=True)
@@ -211,7 +222,12 @@ class gradient_clip(torch.autograd.Function):
         if clip > 1e-8:
             if step % 200 == 50 and name in observe_name:
                 min, max = observe_grad(
-                    grad_output, name, step, time=time, clip_alpha=clip, plot=True
+                    grad_output,
+                    name,
+                    step,
+                    time=time,
+                    clip_alpha=clip,
+                    plot=True,
                 )
             else:
                 min, max = observe_outlier(grad_output, clip_alpha=clip)
@@ -303,8 +319,12 @@ class LSQconv2d(nn.Conv2d):
                 self.scale_weight.data = self.scale_weight.data.abs()
 
             if self.first_pass:
-                self.active_track.append(self.scale_input.cpu().detach().numpy())
-                self.weight_track.append(self.scale_weight.cpu().detach().numpy())
+                self.active_track.append(
+                    self.scale_input.cpu().detach().numpy()
+                )
+                self.weight_track.append(
+                    self.scale_weight.cpu().detach().numpy()
+                )
                 self.iter_track.append(len(self.iter_track))
 
         if self.mode == "exact":
@@ -318,12 +338,16 @@ class LSQconv2d(nn.Conv2d):
                 self.groups,
             )
         elif self.mode.startswith("quantize_sym"):
-            assert (
-                self.scale_weight.min() > 0
-            ), f"{self.quantize}  {self.scale_weight.data.abs()}"
+            assert self.scale_weight.min() > 0, (
+                f"{self.quantize}  {self.scale_weight.data.abs()}"
+            )
             return F.conv2d(
-                SymLsqQuantizer.apply(input, self.scale_input, self.activation_bits),
-                SymLsqQuantizer.apply(self.weight, self.scale_weight, self.weight_bits),
+                SymLsqQuantizer.apply(
+                    input, self.scale_input, self.activation_bits
+                ),
+                SymLsqQuantizer.apply(
+                    self.weight, self.scale_weight, self.weight_bits
+                ),
                 self.bias,
                 self.stride,
                 self.padding,
@@ -332,8 +356,12 @@ class LSQconv2d(nn.Conv2d):
             )
         elif self.mode.startswith("quantize_asym"):
             return F.conv2d(
-                AsymLsqQuantizer.apply(input, self.scale_input, self.activation_bits),
-                SymLsqQuantizer.apply(self.weight, self.scale_weight, self.weight_bits),
+                AsymLsqQuantizer.apply(
+                    input, self.scale_input, self.activation_bits
+                ),
+                SymLsqQuantizer.apply(
+                    self.weight, self.scale_weight, self.weight_bits
+                ),
                 self.bias,
                 self.stride,
                 self.padding,
@@ -356,7 +384,9 @@ class LSQconv2d(nn.Conv2d):
         plt.plot(self.iter_track, self.active_track)
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
-        if not os.path.exists("plt/step_size_conv/input/{}".format(self.start_time)):
+        if not os.path.exists(
+            "plt/step_size_conv/input/{}".format(self.start_time)
+        ):
             print(
                 "Directory {} created".format(
                     "plt/step_size_conv/input/{}".format(self.start_time)
@@ -378,7 +408,9 @@ class LSQconv2d(nn.Conv2d):
         plt.plot(self.iter_track, self.weight_track)
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
-        if not os.path.exists("plt/step_size_conv/weight/{}".format(self.start_time)):
+        if not os.path.exists(
+            "plt/step_size_conv/weight/{}".format(self.start_time)
+        ):
             print(
                 "Directory {} created".format(
                     "plt/step_size_conv/weight/{}".format(self.start_time)
@@ -386,7 +418,8 @@ class LSQconv2d(nn.Conv2d):
             )
 
         os.makedirs(
-            "plt/step_size_conv/weight/{}".format(self.start_time), exist_ok=True
+            "plt/step_size_conv/weight/{}".format(self.start_time),
+            exist_ok=True,
         )
         plt.savefig(
             "plt/step_size_conv/weight/{}/{}.png".format(
@@ -397,7 +430,6 @@ class LSQconv2d(nn.Conv2d):
 
 
 class LSQLinear(nn.Linear):
-
     def __init__(
         self,
         in_features: int,
@@ -410,7 +442,9 @@ class LSQLinear(nn.Linear):
         dtype=None,
     ):
         super().__init__(in_features, out_features, bias, device, dtype)
-        assert mode in ALL_MODES, f"input mode {mode}, all valid options: {ALL_MODES}"
+        assert mode in ALL_MODES, (
+            f"input mode {mode}, all valid options: {ALL_MODES}"
+        )
         self.mode = mode
         self.weight_bits = weight_bits
         self.activation_bits = activation_bits
@@ -472,7 +506,9 @@ class LSQLinear(nn.Linear):
                     input, self.scale_input, self.activation_bits
                 )
             else:
-                return AsymLsqQuantizer.apply(input, self.scale_input, self.weight_bits)
+                return AsymLsqQuantizer.apply(
+                    input, self.scale_input, self.weight_bits
+                )
 
         def quantize_weight(weight):
             if self.mode == "exact":

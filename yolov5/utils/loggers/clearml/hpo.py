@@ -25,21 +25,11 @@ optimizer = HyperParameterOptimizer(
     hyper_parameters=[
         UniformParameterRange("Hyperparameters/lr0", min_value=1e-5, max_value=1e-1),
         UniformParameterRange("Hyperparameters/lrf", min_value=0.01, max_value=1.0),
-        UniformParameterRange(
-            "Hyperparameters/momentum", min_value=0.6, max_value=0.98
-        ),
-        UniformParameterRange(
-            "Hyperparameters/weight_decay", min_value=0.0, max_value=0.001
-        ),
-        UniformParameterRange(
-            "Hyperparameters/warmup_epochs", min_value=0.0, max_value=5.0
-        ),
-        UniformParameterRange(
-            "Hyperparameters/warmup_momentum", min_value=0.0, max_value=0.95
-        ),
-        UniformParameterRange(
-            "Hyperparameters/warmup_bias_lr", min_value=0.0, max_value=0.2
-        ),
+        UniformParameterRange("Hyperparameters/momentum", min_value=0.6, max_value=0.98),
+        UniformParameterRange("Hyperparameters/weight_decay", min_value=0.0, max_value=0.001),
+        UniformParameterRange("Hyperparameters/warmup_epochs", min_value=0.0, max_value=5.0),
+        UniformParameterRange("Hyperparameters/warmup_momentum", min_value=0.0, max_value=0.95),
+        UniformParameterRange("Hyperparameters/warmup_bias_lr", min_value=0.0, max_value=0.2),
         UniformParameterRange("Hyperparameters/box", min_value=0.02, max_value=0.2),
         UniformParameterRange("Hyperparameters/cls", min_value=0.2, max_value=4.0),
         UniformParameterRange("Hyperparameters/cls_pw", min_value=0.5, max_value=2.0),
@@ -52,21 +42,15 @@ optimizer = HyperParameterOptimizer(
         UniformParameterRange("Hyperparameters/hsv_s", min_value=0.0, max_value=0.9),
         UniformParameterRange("Hyperparameters/hsv_v", min_value=0.0, max_value=0.9),
         UniformParameterRange("Hyperparameters/degrees", min_value=0.0, max_value=45.0),
-        UniformParameterRange(
-            "Hyperparameters/translate", min_value=0.0, max_value=0.9
-        ),
+        UniformParameterRange("Hyperparameters/translate", min_value=0.0, max_value=0.9),
         UniformParameterRange("Hyperparameters/scale", min_value=0.0, max_value=0.9),
         UniformParameterRange("Hyperparameters/shear", min_value=0.0, max_value=10.0),
-        UniformParameterRange(
-            "Hyperparameters/perspective", min_value=0.0, max_value=0.001
-        ),
+        UniformParameterRange("Hyperparameters/perspective", min_value=0.0, max_value=0.001),
         UniformParameterRange("Hyperparameters/flipud", min_value=0.0, max_value=1.0),
         UniformParameterRange("Hyperparameters/fliplr", min_value=0.0, max_value=1.0),
         UniformParameterRange("Hyperparameters/mosaic", min_value=0.0, max_value=1.0),
         UniformParameterRange("Hyperparameters/mixup", min_value=0.0, max_value=1.0),
-        UniformParameterRange(
-            "Hyperparameters/copy_paste", min_value=0.0, max_value=1.0
-        ),
+        UniformParameterRange("Hyperparameters/copy_paste", min_value=0.0, max_value=1.0),
     ],
     # this is the objective metric we want to maximize/minimize
     objective_metric_title="metrics",

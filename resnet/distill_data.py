@@ -1,34 +1,32 @@
 import time
 import os
-import datetime
 
 import torch
-from torchvision.ops.misc import FrozenBatchNorm2d
 
 import transforms
 from my_dataset_coco import CocoDetection, custom_collate_fn
-from my_dataset_voc import VOCInstances
 from backbone import resnet50_fpn_backbone
 from network_files import MaskRCNN
-import train_utils.train_eval_utils as utils
 from train_utils import (
     GroupedBatchSampler,
     create_aspect_ratio_groups,
     init_distributed_mode,
-    save_on_master,
     mkdir,
 )
 from torch.utils.data import Subset
-from train_utils.distributed_utils import init_seeds, MetricLogger, is_main_process
+from train_utils.distributed_utils import (
+    init_seeds,
+    MetricLogger,
+    is_main_process,
+)
 from train_utils.coco_eval import EvalCOCOMetric
-import torch.distributed as dist
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 import collections
 import json
 import torchvision.utils as vutils
-from typing import Tuple, List, Dict, Optional, Union
+from typing import Tuple, List
 from network_files.transform import GeneralizedRCNNTransform
 from copy import deepcopy
 from draw_box_utils import draw_objs
@@ -39,7 +37,13 @@ from torchvision import transforms as visionTransform
 @torch.no_grad()
 # input should be tensor
 def predict(
-    model, inputs, device, original_image_sizes, save_path, image_idx, category_index
+    model,
+    inputs,
+    device,
+    original_image_sizes,
+    save_path,
+    image_idx,
+    category_index,
 ):
     model.eval()
     bs = inputs.shape[0]
@@ -74,7 +78,9 @@ def predict(
                 font_size=20,
             )
 
-            plot_img.save(f"{save_path}/image{image_idx*bs + i}_gpu{args.rank}.jpg")
+            plot_img.save(
+                f"{save_path}/image{image_idx * bs + i}_gpu{args.rank}.jpg"
+            )
 
 
 @torch.no_grad()
@@ -168,7 +174,10 @@ def get_image_prior_losses(inputs_jit):
     diff4 = inputs_jit[:, :, :-1, :-1] - inputs_jit[:, :, 1:, 1:]
 
     loss_var_l2 = (
-        torch.norm(diff1) + torch.norm(diff2) + torch.norm(diff3) + torch.norm(diff4)
+        torch.norm(diff1)
+        + torch.norm(diff2)
+        + torch.norm(diff3)
+        + torch.norm(diff4)
     )
     loss_var_l1 = (
         (diff1.abs() / 255.0).mean()
@@ -251,13 +260,16 @@ def prepare(args):
     if calibration_size != 0:
         print(f"before calibration: dataset len is {len(train_dataset)}")
         train_dataset = Subset(
-            train_dataset, range(start_shift_size, start_shift_size + calibration_size)
+            train_dataset,
+            range(start_shift_size, start_shift_size + calibration_size),
         )
         print(f"after calibration: dataset len is {len(train_dataset)}")
 
     print("Creating data loaders")
     if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_dataset
+        )
     else:
         train_sampler = torch.utils.data.RandomSampler(train_dataset)
 
@@ -292,7 +304,9 @@ def prepare(args):
     model.to(device)
 
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[args.gpu]
+        )
 
     verifier = None
     if args.verifier:
@@ -360,11 +374,13 @@ def distill_data(
     image_std = [0.229, 0.224, 0.225]
     min_size = 800
     max_size = 1333
-    transform = GeneralizedRCNNTransform(min_size, max_size, image_mean, image_std)
+    transform = GeneralizedRCNNTransform(
+        min_size, max_size, image_mean, image_std
+    )
 
     label_json_path = "./coco91_indices.json"
-    assert os.path.exists(label_json_path), "json file {} dose not exist.".format(
-        label_json_path
+    assert os.path.exists(label_json_path), (
+        "json file {} dose not exist.".format(label_json_path)
     )
     with open(label_json_path, "r") as json_file:
         category_index = json.load(json_file)
@@ -392,7 +408,8 @@ def distill_data(
         images, _ = transform(images, target_clone)
 
         save_img(
-            images.tensors, f"{prefix}/initial_images/batch{idx}_gpu{args.rank}.png"
+            images.tensors,
+            f"{prefix}/initial_images/batch{idx}_gpu{args.rank}.png",
         )
         inputs.tensors.requires_grad_()
 
@@ -402,7 +419,10 @@ def distill_data(
         lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=iterations_per_layer, eta_min=0.0
         )
-        clamp_max, clamp_min = images.tensors.max().item(), images.tensors.min().item()
+        clamp_max, clamp_min = (
+            images.tensors.max().item(),
+            images.tensors.min().item(),
+        )
 
         for iteration_loc in tqdm(range(1, iterations_per_layer + 1)):
             lr_scheduler.step()
@@ -424,23 +444,34 @@ def distill_data(
             # batch norm feature loss
             numLayers = len(hook_handles)
             loss_r_feature = torch.sum(
-                torch.stack([mod.r_feature for mod in hook_handles[0:numLayers]])
+                torch.stack(
+                    [mod.r_feature for mod in hook_handles[0:numLayers]]
+                )
             )
             loss_r_feature_copy = loss_r_feature.clone().detach()
             loss_r_feature = args.r_feature * loss_r_feature
 
             # R_feature loss layer_1
-            loss_r_feature_first = sum([mod.r_feature for mod in hook_handles[:1]])
+            loss_r_feature_first = sum(
+                [mod.r_feature for mod in hook_handles[:1]]
+            )
             loss_r_feature_first_copy = loss_r_feature_first.clone().detach()
             loss_r_feature_first = args.first_bn_coef * loss_r_feature_first
 
             # combining losses
-            loss_aux = loss_var_l2 + loss_var_l1 + loss_r_feature_first + loss_r_feature
+            loss_aux = (
+                loss_var_l2
+                + loss_var_l1
+                + loss_r_feature_first
+                + loss_r_feature
+            )
 
             loss = main_loss + loss_aux
 
             if iteration % show_every == 0:
-                debug_dict = {key: value.item() for key, value in loss_dict.items()}
+                debug_dict = {
+                    key: value.item() for key, value in loss_dict.items()
+                }
                 loss_record.append(
                     {
                         "iteration": iteration,
@@ -473,15 +504,19 @@ def distill_data(
                 print("************Main****************")
                 for key in debug_dict.keys():
                     print(key, debug_dict[key])
-                
+
             if iteration % save_every == 0:
-                os.makedirs(f"{prefix}/generated_images/iter{iteration}", exist_ok=True)
+                os.makedirs(
+                    f"{prefix}/generated_images/iter{iteration}", exist_ok=True
+                )
                 save_img(
                     inputs.tensors,
                     f"{prefix}/generated_images/iter{iteration}/batch{idx}_gpu{args.rank}.png",
                 )
             if iteration == iterations_per_layer:
-                os.makedirs(f"{work_dir}/weights/iter{iteration}", exist_ok=True)
+                os.makedirs(
+                    f"{work_dir}/weights/iter{iteration}", exist_ok=True
+                )
                 ckpt = {
                     "initial": images,
                     "generate": inputs,
@@ -512,7 +547,9 @@ def distill_data(
         # to reduce memory consumption by states of the optimizer we deallocate memory
         optimizer.state = collections.defaultdict(dict)
 
-        with open(f"{work_dir}/loss/batch{idx}_gpu{args.rank}.json", "w") as fout:
+        with open(
+            f"{work_dir}/loss/batch{idx}_gpu{args.rank}.json", "w"
+        ) as fout:
             json.dump(loss_record, fout, indent=2)
 
 
@@ -523,7 +560,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--data-path", help="dataset")
     parser.add_argument("--device", default="cuda", help="device")
-    parser.add_argument("--num-classes", default=90, type=int, help="num_classes")
+    parser.add_argument(
+        "--num-classes", default=90, type=int, help="num_classes"
+    )
     parser.add_argument(
         "-b",
         "--batch-size",
@@ -546,27 +585,43 @@ if __name__ == "__main__":
         help="initial learning rate, 0.02 is the default value for training "
         "on 8 gpus and 2 images_per_gpu",
     )
-    parser.add_argument("--print-freq", default=50, type=int, help="print frequency")
+    parser.add_argument(
+        "--print-freq", default=50, type=int, help="print frequency"
+    )
     parser.add_argument(
         "--output-dir", default="./multi_train", help="path where to save"
     )
     parser.add_argument("--aspect-ratio-group-factor", default=3, type=int)
 
     parser.add_argument(
-        "--world-size", default=4, type=int, help="number of distributed processes"
+        "--world-size",
+        default=4,
+        type=int,
+        help="number of distributed processes",
     )
     parser.add_argument(
-        "--dist-url", default="env://", help="url used to set up distributed training"
+        "--dist-url",
+        default="env://",
+        help="url used to set up distributed training",
     )
     parser.add_argument(
-        "--pretrain", type=bool, default=True, help="load COCO pretrain weights."
+        "--pretrain",
+        type=bool,
+        default=True,
+        help="load COCO pretrain weights.",
     )
 
     parser.add_argument(
-        "--mode", type=str, default="exact", help="exact or quantize for conv layer"
+        "--mode",
+        type=str,
+        default="exact",
+        help="exact or quantize for conv layer",
     )
     parser.add_argument(
-        "--calibration_size", type=int, default=0, help="Size of Calibration set"
+        "--calibration_size",
+        type=int,
+        default=0,
+        help="Size of Calibration set",
     )
     parser.add_argument(
         "--start_shift_size",
@@ -574,7 +629,9 @@ if __name__ == "__main__":
         default=0,
         help="Size of Start Shift, enabling mutiple machines to work on data generation",
     )
-    parser.add_argument("--seed", type=int, default=0, help="Global training seed")
+    parser.add_argument(
+        "--seed", type=int, default=0, help="Global training seed"
+    )
     parser.add_argument(
         "--num_bits",
         type=int,
@@ -596,10 +653,15 @@ if __name__ == "__main__":
 
     # verifier model(student)
     parser.add_argument(
-        "--verifier", action="store_true", help="predict batch with another model"
+        "--verifier",
+        action="store_true",
+        help="predict batch with another model",
     )
     parser.add_argument(
-        "--iterations", default=2000, type=int, help="number of iterations for DI optim"
+        "--iterations",
+        default=2000,
+        type=int,
+        help="number of iterations for DI optim",
     )
 
     parser.add_argument(
@@ -634,7 +696,9 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--do_clip", action="store_true", help="apply clip during model inversion"
+        "--do_clip",
+        action="store_true",
+        help="apply clip during model inversion",
     )
 
     args = parser.parse_args()

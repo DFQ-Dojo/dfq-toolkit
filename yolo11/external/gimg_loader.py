@@ -12,7 +12,9 @@ from external.data import get_generated_dataset
 def build_dataloader(dataset, batch_size, shuffle=True, rank=-1):
     """Return an InfiniteDataLoader or DataLoader for training or validation set."""
     sampler = (
-        None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
+        None
+        if rank == -1
+        else distributed.DistributedSampler(dataset, shuffle=shuffle)
     )
     generator = torch.Generator()
     generator.manual_seed(6148914691236517205 + RANK)

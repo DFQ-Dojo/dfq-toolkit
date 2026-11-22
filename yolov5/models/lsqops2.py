@@ -122,9 +122,7 @@ class LSQConv(nn.Conv2d):
         num_bits=1,
         mode="exact",
     ):
-        super(LSQConv, self).__init__(
-            in_chn, out_chn, kernel_size, stride, padding, dilation, groups
-        )
+        super(LSQConv, self).__init__(in_chn, out_chn, kernel_size, stride, padding, dilation, groups)
         if not bias:
             self.bias = None
         self.quantizer_tensor = LSQ(num_bits)

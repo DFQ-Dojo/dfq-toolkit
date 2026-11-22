@@ -50,5 +50,6 @@ class AsymQuantizeOption(BaseModel):
 # - AsymQuantizeOption: Use LSQ+ to quantize the model. This is controlled by `AsymQuantizeOption` class.
 #                     See its definition for more instructions.
 QuantizeMode = Annotated[
-    ExactModel | SymQuantizeOption | AsymQuantizeOption, Field(discriminator="kind")
+    ExactModel | SymQuantizeOption | AsymQuantizeOption,
+    Field(discriminator="kind"),
 ]

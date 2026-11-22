@@ -41,20 +41,10 @@ class SymLsqQuantizer(torch.autograd.Function):
 
         indicate_small = (q_w < Qn).float()
         indicate_big = (q_w > Qp).float()
-        indicate_middle = (
-            1.0 - indicate_small - indicate_big
-        )  # this is more cpu-friendly than torch.ones(input_.shape)
+        indicate_middle = 1.0 - indicate_small - indicate_big  # this is more cpu-friendly than torch.ones(input_.shape)
 
         grad_scale = (
-            (
-                (
-                    indicate_small * Qn
-                    + indicate_big * Qp
-                    + indicate_middle * (-q_w + q_w.round())
-                )
-                * grad_output
-                * times
-            )
+            ((indicate_small * Qn + indicate_big * Qp + indicate_middle * (-q_w + q_w.round())) * grad_output * times)
             .sum()
             .unsqueeze(dim=0)
         )
@@ -97,9 +87,7 @@ class SymLsqQuantizer(torch.autograd.Function):
 
 class convnd(Function):
     @staticmethod
-    def run_forward(
-        forward_op, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1
-    ):
+    def run_forward(forward_op, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         return forward_op(input, weight, bias, stride, padding, dilation, groups)
 
     @staticmethod
@@ -186,9 +174,7 @@ class conv_act_lsq(Function):
         Qn = -(2 ** (num_bits - 1))
         Qp = 2 ** (num_bits - 1) - 1
         q_input, times_input = SymLsqQuantizer.run_forward(input, scale_input, Qn, Qp)
-        q_weight, times_weight = SymLsqQuantizer.run_forward(
-            weight, scale_weight, Qn, Qp
-        )
+        q_weight, times_weight = SymLsqQuantizer.run_forward(weight, scale_weight, Qn, Qp)
         ctx.saved = (
             q_input,
             q_weight,
@@ -203,15 +189,11 @@ class conv_act_lsq(Function):
             Qp,
         )
         ctx.other_args = (stride, padding, dilation, groups)
-        return convnd.run_forward(
-            F.conv2d, q_input, q_weight, bias, stride, padding, dilation, groups
-        )
+        return convnd.run_forward(F.conv2d, q_input, q_weight, bias, stride, padding, dilation, groups)
 
     @staticmethod
     def backward(ctx, grad_output):
-        grad_input_hidden, grad_weight_hidden, grad_bias = convnd.run_backward(
-            ctx, grad_output, [0, 2, 3], _pair
-        )
+        grad_input_hidden, grad_weight_hidden, grad_bias = convnd.run_backward(ctx, grad_output, [0, 2, 3], _pair)
         (
             _,
             _,
@@ -253,20 +235,14 @@ class conv_act_lsq(Function):
 
 class conv_act_test(Function):
     @staticmethod
-    def forward(
-        ctx, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1
-    ):
+    def forward(ctx, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         ctx.saved = input, weight, bias, None, None, None, None, None, None, None, None
         ctx.other_args = (stride, padding, dilation, groups)
-        return convnd.run_forward(
-            F.conv2d, input, weight, bias, stride, padding, dilation, groups
-        )
+        return convnd.run_forward(F.conv2d, input, weight, bias, stride, padding, dilation, groups)
 
     @staticmethod
     def backward(ctx, grad_output):
-        grad_input, grad_weight, grad_bias = convnd.run_backward(
-            ctx, grad_output, [0, 2, 3], _pair
-        )
+        grad_input, grad_weight, grad_bias = convnd.run_backward(ctx, grad_output, [0, 2, 3], _pair)
         return grad_input, grad_weight, grad_bias, None, None, None, None
 
 
@@ -318,20 +294,10 @@ class LSQconv2d(nn.Conv2d):
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt/step_size_conv/input/{}".format(self.start_time)):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/input/{}".format(self.start_time)
-                )
-            )
+            print("Directory {} created".format("plt/step_size_conv/input/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/input/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/input/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/input/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/input/{}/{}.png".format(self.start_time, len(self.iter_track)))
         plt.close()
 
         plt.figure()
@@ -340,20 +306,10 @@ class LSQconv2d(nn.Conv2d):
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt/step_size_conv/weight/{}".format(self.start_time)):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/weight/{}".format(self.start_time)
-                )
-            )
+            print("Directory {} created".format("plt/step_size_conv/weight/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/weight/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/weight/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/weight/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/weight/{}/{}.png".format(self.start_time, len(self.iter_track)))
         plt.close()
 
     # todo: check是否符合预期
@@ -371,12 +327,8 @@ class LSQconv2d(nn.Conv2d):
             else:
                 self.first_pass += 1
                 Qp = 2 ** (self.num_bits - 1) - 1
-                self.scale_input.data.copy_(
-                    2 * input.abs().mean() / math.sqrt(Qp) + 1e-10
-                )
-                self.scale_weight.data.copy_(
-                    2 * self.weight.abs().mean() / math.sqrt(Qp) + 1e-10
-                )
+                self.scale_input.data.copy_(2 * input.abs().mean() / math.sqrt(Qp) + 1e-10)
+                self.scale_weight.data.copy_(2 * self.weight.abs().mean() / math.sqrt(Qp) + 1e-10)
                 print(
                     f"Actually Using LSQconv2d! Init scale_input = {self.scale_input.data.item()} Init scale_weight = {self.scale_weight.data.item()}"
                 )
@@ -468,9 +420,7 @@ if __name__ == "__main__":
     init.constant_(model.conv.bias, 1)
     init.constant_(test.conv.bias, 1)
 
-    input_data = nn.Parameter(
-        torch.randn(1, 1, 5, 5), requires_grad=True
-    )  # (batch_size, channels, height, width)
+    input_data = nn.Parameter(torch.randn(1, 1, 5, 5), requires_grad=True)  # (batch_size, channels, height, width)
 
     output = model(input_data)
     testout = test(input_data)

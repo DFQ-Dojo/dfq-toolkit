@@ -111,9 +111,13 @@ class EvalCOCOMetric:
 
             res_list = []
             # 遍历每个目标的信息
-            for mask, label, score in zip(masks, per_image_classes, per_image_scores):
+            for mask, label, score in zip(
+                masks, per_image_classes, per_image_scores
+            ):
                 rle = mask_util.encode(
-                    np.array(mask[0, :, :, np.newaxis], dtype=np.uint8, order="F")
+                    np.array(
+                        mask[0, :, :, np.newaxis], dtype=np.uint8, order="F"
+                    )
                 )[0]
                 rle["counts"] = rle["counts"].decode("utf-8")
 
@@ -141,7 +145,10 @@ class EvalCOCOMetric:
     def synchronize_results(self):
         # 同步所有进程中的数据
         eval_ids, eval_results = merge(self.img_ids, self.results)
-        self.aggregation_results = {"img_ids": eval_ids, "results": eval_results}
+        self.aggregation_results = {
+            "img_ids": eval_ids,
+            "results": eval_results,
+        }
 
         # 主进程上保存即可
         if is_main_process():

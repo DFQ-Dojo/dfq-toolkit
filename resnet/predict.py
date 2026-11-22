@@ -45,15 +45,19 @@ def main():
     model = create_model(num_classes=num_classes + 1, box_thresh=box_thresh)
 
     # load train weights
-    assert os.path.exists(weights_path), "{} file dose not exist.".format(weights_path)
+    assert os.path.exists(weights_path), "{} file dose not exist.".format(
+        weights_path
+    )
     weights_dict = torch.load(weights_path, map_location="cpu")
-    weights_dict = weights_dict["model"] if "model" in weights_dict else weights_dict
+    weights_dict = (
+        weights_dict["model"] if "model" in weights_dict else weights_dict
+    )
     model.load_state_dict(weights_dict)
     model.to(device)
 
     # read class_indict
-    assert os.path.exists(label_json_path), "json file {} dose not exist.".format(
-        label_json_path
+    assert os.path.exists(label_json_path), (
+        "json file {} dose not exist.".format(label_json_path)
     )
     with open(label_json_path, "r") as json_file:
         category_index = json.load(json_file)

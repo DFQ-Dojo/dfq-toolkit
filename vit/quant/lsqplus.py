@@ -50,7 +50,9 @@ class ALSQPlus(Function):
             .sum()
             .unsqueeze(dim=0)
         )
-        grad_beta = ((smaller + bigger) * grad_weight * g).sum().unsqueeze(dim=0)
+        grad_beta = (
+            ((smaller + bigger) * grad_weight * g).sum().unsqueeze(dim=0)
+        )
         # 在量化区间之外的值都是常数，故导数也是0
         grad_weight = between * grad_weight
         # 返回的梯度要和forward的参数对应起来
@@ -106,7 +108,9 @@ class WLSQPlus(Function):
                 * g
             )
             grad_alpha = (
-                grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
+                grad_alpha.contiguous()
+                .view(grad_alpha.size()[0], -1)
+                .sum(dim=1)
             )
         else:
             grad_alpha = (
@@ -201,7 +205,9 @@ class LSQPlusActivationQuantizer(nn.Module):
 
 # W(权重)量化
 class LSQPlusWeightQuantizer(nn.Module):
-    def __init__(self, w_bits, all_positive=False, per_channel=False, batch_init=20):
+    def __init__(
+        self, w_bits, all_positive=False, per_channel=False, batch_init=20
+    ):
         super(LSQPlusWeightQuantizer, self).__init__()
         self.w_bits = w_bits
         self.all_positive = all_positive
@@ -225,9 +231,9 @@ class LSQPlusWeightQuantizer(nn.Module):
 
     # 量化/反量化
     def forward(self, weight):
-        assert (
-            self.batch_init == 1 and not self.per_channel
-        ), "error occurs in weight setting"
+        assert self.batch_init == 1 and not self.per_channel, (
+            "error occurs in weight setting"
+        )
         if self.quantize:
             with torch.no_grad():
                 if self.init_state == 0:
@@ -244,17 +250,24 @@ class LSQPlusWeightQuantizer(nn.Module):
                     self.div = 2**self.w_bits - 1
                     if self.per_channel:
                         weight_tmp = (
-                            weight.detach().contiguous().view(weight.size()[0], -1)
+                            weight.detach()
+                            .contiguous()
+                            .view(weight.size()[0], -1)
                         )
                         mean = torch.mean(weight_tmp, dim=1)
                         std = torch.std(weight_tmp, dim=1)
                         self.s.data, _ = torch.max(
                             torch.stack(
-                                [torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]
+                                [
+                                    torch.abs(mean - 3 * std),
+                                    torch.abs(mean + 3 * std),
+                                ]
                             ),
                             dim=0,
                         )
-                        self.s.data = self.s.data * 0.9 + 0.1 * self.s.data / self.div
+                        self.s.data = (
+                            self.s.data * 0.9 + 0.1 * self.s.data / self.div
+                        )
                     else:
                         mean = torch.mean(weight.detach())
                         std = torch.std(weight.detach())
@@ -262,7 +275,10 @@ class LSQPlusWeightQuantizer(nn.Module):
                             self.s.data * 0.9
                             + 0.1
                             * max(
-                                [torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]
+                                [
+                                    torch.abs(mean - 3 * std),
+                                    torch.abs(mean + 3 * std),
+                                ]
                             )
                             / self.div
                         )
@@ -356,7 +372,6 @@ class QuantConv2dPlus(nn.Conv2d):
 
 
 class QuantLinearPlus(nn.Linear):
-
     def __init__(
         self,
         in_features,

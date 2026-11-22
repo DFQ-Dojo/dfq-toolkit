@@ -13,7 +13,8 @@ model = dict(
         norm_eval=True,
         style="caffe",
         init_cfg=dict(
-            type="Pretrained", checkpoint="open-mmlab://detectron2/resnet50_caffe"
+            type="Pretrained",
+            checkpoint="open-mmlab://detectron2/resnet50_caffe",
         ),
     ),
     neck=None,
@@ -32,7 +33,9 @@ model = dict(
             target_means=[0.0, 0.0, 0.0, 0.0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
         ),
-        loss_cls=dict(type="CrossEntropyLoss", use_sigmoid=True, loss_weight=1.0),
+        loss_cls=dict(
+            type="CrossEntropyLoss", use_sigmoid=True, loss_weight=1.0
+        ),
         loss_bbox=dict(type="L1Loss", loss_weight=1.0),
     ),
     # model training and testing settings

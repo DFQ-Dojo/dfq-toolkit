@@ -34,7 +34,9 @@ class v8DetectionLoss(BaseModel, arbitrary_types_allowed=True):
             i = targets[:, 0]  # image index
             _, counts = i.unique(return_counts=True)
             counts = counts.to(dtype=torch.int32)
-            out = torch.zeros(batch_size, counts.max(), ne - 1, device=self.device)
+            out = torch.zeros(
+                batch_size, counts.max(), ne - 1, device=self.device
+            )
             for j in range(batch_size):
                 matches = i == j
                 n = matches.sum()
@@ -77,17 +79,25 @@ class v8DetectionLoss(BaseModel, arbitrary_types_allowed=True):
 
         # Targets
         targets = torch.cat(
-            (batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]),
+            (
+                batch["batch_idx"].view(-1, 1),
+                batch["cls"].view(-1, 1),
+                batch["bboxes"],
+            ),
             1,
         )
         targets = self.preprocess(
-            targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]]
+            targets.to(self.device),
+            batch_size,
+            scale_tensor=imgsz[[1, 0, 1, 0]],
         )
         gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
 
         # Pboxes
-        pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
+        pred_bboxes = self.bbox_decode(
+            anchor_points, pred_distri
+        )  # xyxy, (b, h*w, 4)
         # dfl_conf = pred_distri.view(batch_size, -1, 4, self.reg_max).detach().softmax(-1)
         # dfl_conf = (dfl_conf.amax(-1).mean(-1) + dfl_conf.amax(-1).amin(-1)) / 2
 
@@ -106,7 +116,8 @@ class v8DetectionLoss(BaseModel, arbitrary_types_allowed=True):
         # Cls loss
         # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
         loss[1] = (
-            self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum
+            self.bce(pred_scores, target_scores.to(dtype)).sum()
+            / target_scores_sum
         )  # BCE
 
         # Bbox loss
@@ -160,7 +171,9 @@ def new_v8_detection_loss(
     no = nc + detect_reg_max * 4
     use_dfl = detect_reg_max > 1
 
-    assigner = TaskAlignedAssigner(topk=tal_topk, num_classes=nc, alpha=0.5, beta=6.0)
+    assigner = TaskAlignedAssigner(
+        topk=tal_topk, num_classes=nc, alpha=0.5, beta=6.0
+    )
     bbox_loss = BboxLoss(detect_reg_max).to(device)
     proj = torch.arange(detect_reg_max, dtype=torch.float, device=device)
 

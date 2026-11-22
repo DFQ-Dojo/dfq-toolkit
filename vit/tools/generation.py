@@ -20,7 +20,11 @@ import torch
 from mmcv import Config
 from mmcv.parallel import MMDataParallel
 from mmcv.runner import load_checkpoint, wrap_fp16_model
-from mmdet.datasets import build_dataloader, build_dataset, replace_ImageToTensor
+from mmdet.datasets import (
+    build_dataloader,
+    build_dataset,
+    replace_ImageToTensor,
+)
 from mmdet.models import build_detector
 
 from mmdet_custom.models.vit import Attention
@@ -30,12 +34,13 @@ from tools.kde import KernelDensityEstimator
 CONFIG_ENVIRON_KEY = "GENERATION_CONFIG"
 
 CONFIG_FILE: Optional[Path] = (
-    Path(os.environ[CONFIG_ENVIRON_KEY]) if os.environ.get(CONFIG_ENVIRON_KEY) else None
+    Path(os.environ[CONFIG_ENVIRON_KEY])
+    if os.environ.get(CONFIG_ENVIRON_KEY)
+    else None
 )
 
 
 class GenOptions(BaseSettings, cli_parse_args=True, cli_prog_name="Generation"):
-
     model_config = SettingsConfigDict(json_file=CONFIG_FILE)
 
     config: str = Field(description="models config")
@@ -58,11 +63,15 @@ class GenOptions(BaseSettings, cli_parse_args=True, cli_prog_name="Generation"):
 
     iterations: int = Field(2000)
 
-    entropy_weight: float = Field(1.0, description="loss when generating image.")
+    entropy_weight: float = Field(
+        1.0, description="loss when generating image."
+    )
 
     detection_loss_weight: float = Field(10, description="loss of detection.")
 
-    tv_loss_weight: float = Field(0.001, description="loss of variance regularization.")
+    tv_loss_weight: float = Field(
+        0.001, description="loss of variance regularization."
+    )
 
     devices: int = Field(0, description="available device.")
 
@@ -121,7 +130,10 @@ def get_image_prior_losses(inputs_jit):
     diff4 = inputs_jit[:, :, :-1, :-1] - inputs_jit[:, :, 1:, 1:]
 
     loss_var_l2 = (
-        torch.norm(diff1) + torch.norm(diff2) + torch.norm(diff3) + torch.norm(diff4)
+        torch.norm(diff1)
+        + torch.norm(diff2)
+        + torch.norm(diff3)
+        + torch.norm(diff4)
     )
     return loss_var_l2
 
@@ -136,7 +148,9 @@ def clip(image_tensor, use_fp16=False):
         std = np.array([0.229, 0.224, 0.225])
     for c in range(3):
         m, s = mean[c], std[c]
-        image_tensor[:, c] = torch.clamp(image_tensor[:, c], -m / s, (1 - m) / s)
+        image_tensor[:, c] = torch.clamp(
+            image_tensor[:, c], -m / s, (1 - m) / s
+        )
     return image_tensor
 
 
@@ -229,7 +243,6 @@ def generate_data(
     lr_scheduler = lr_cosine_policy(lr, 100, iterations)
 
     for itr in tqdm(range(iterations)):
-
         # Learning rate scheduling
         lr_scheduler(optimizer, itr, itr)
 
@@ -316,7 +329,9 @@ def setup_dataloader(dataset_config, batch_size: int, workers_per_gpu: int):
     return data_loader, dataset
 
 
-def setup_model(model_cfg, test_cfg, use_fp16: bool, pretrained_path: str, dataset):
+def setup_model(
+    model_cfg, test_cfg, use_fp16: bool, pretrained_path: str, dataset
+):
 
     print(model_cfg, test_cfg)
     model = build_detector(model_cfg, test_cfg=test_cfg)

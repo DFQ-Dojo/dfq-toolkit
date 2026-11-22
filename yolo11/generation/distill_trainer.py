@@ -42,7 +42,9 @@ def save_img(batch_tens, loc):
     Saves a batch_tens of images to location loc
     """
     print(
-        "Saving batch_tensor of shape {} to location: {}".format(batch_tens.shape, loc)
+        "Saving batch_tensor of shape {} to location: {}".format(
+            batch_tens.shape, loc
+        )
     )
     vutils.save_image(batch_tens, loc, normalize=True, scale_each=True)
 
@@ -55,7 +57,10 @@ def get_image_prior_losses(inputs_jit):
     diff4 = inputs_jit[:, :, :-1, :-1] - inputs_jit[:, :, 1:, 1:]
 
     loss_var_l2 = (
-        torch.norm(diff1) + torch.norm(diff2) + torch.norm(diff3) + torch.norm(diff4)
+        torch.norm(diff1)
+        + torch.norm(diff2)
+        + torch.norm(diff3)
+        + torch.norm(diff4)
     )
     loss_var_l1 = (
         (diff1.abs() / 255.0).mean()
@@ -121,7 +126,9 @@ class CSGLossResult(BaseModel, arbitrary_types_allowed=True):
 
     def report(self, writer: SummaryWriter, iteration: int, lr: float):
         # Weighted Loss
-        writer.add_scalar("weighted/total_loss", self.total_loss.item(), iteration)
+        writer.add_scalar(
+            "weighted/total_loss", self.total_loss.item(), iteration
+        )
         writer.add_scalar(
             "weighted/task_loss", self.weighted_main_loss.item(), iteration
         )
@@ -141,7 +148,9 @@ class CSGLossResult(BaseModel, arbitrary_types_allowed=True):
         )
 
         # Unweighted loss
-        writer.add_scalar("unweighted/task_loss", self.loss_main.item(), iteration)
+        writer.add_scalar(
+            "unweighted/task_loss", self.loss_main.item(), iteration
+        )
         writer.add_scalar(
             "unweighted/prior_loss_var_l1",
             self.loss_var_l1.item(),
@@ -336,16 +345,19 @@ class DistillTrainer(BaseModel, arbitrary_types_allowed=True):
         sample_batch.bboxes = sample_batch.bboxes.to(self.device)
         sample_batch.classes = sample_batch.classes.to(self.device)
 
-        optimizer = torch.optim.Adam([inputs], lr=self.lr, betas=(0.9, 0.999), eps=1e-8)
+        optimizer = torch.optim.Adam(
+            [inputs], lr=self.lr, betas=(0.9, 0.999), eps=1e-8
+        )
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=self.iterations_per_layer, eta_min=0.0
         )
 
         for iteration in tqdm(range(1, self.iterations_per_layer + 1)):
-
             _, preds_item = self.teacher_model.inference(inputs)
 
-            main_loss, _ = self.v8_loss(preds_item, to_yolo_format(sample_batch))
+            main_loss, _ = self.v8_loss(
+                preds_item, to_yolo_format(sample_batch)
+            )
 
             loss_result = self.csg_loss.calculate_loss(
                 inputs, main_loss, self.hook_handlers
@@ -397,7 +409,9 @@ class DistillTrainer(BaseModel, arbitrary_types_allowed=True):
                     0,
                 )
 
-                sample_batch = self.fp_sampler.sample(iteration, inputs, sample_batch)
+                sample_batch = self.fp_sampler.sample(
+                    iteration, inputs, sample_batch
+                )
 
                 # early stopping
                 if best_cost > verifier_loss.item() or iteration < 100:
@@ -418,7 +432,9 @@ class DistillTrainer(BaseModel, arbitrary_types_allowed=True):
                 )
 
                 if RANK in {-1, 0}:
-                    print("------------iteration {}----------".format(iteration))
+                    print(
+                        "------------iteration {}----------".format(iteration)
+                    )
                     print("************Train****************")
                     print(loss_result)
                     print("************Val****************")
@@ -438,10 +454,7 @@ class DistillTrainer(BaseModel, arbitrary_types_allowed=True):
 
             # save image
             if self.save_images and iteration % self.save_every == 0:
-
-                save_dir = (
-                    f"{prefix}/generated_images/batch{int(iteration/self.save_every)}"
-                )
+                save_dir = f"{prefix}/generated_images/batch{int(iteration / self.save_every)}"
                 os.makedirs(save_dir, exist_ok=True)
                 metric_loss, loss_item, map50, map = self.metrics.metric(
                     inputs.detach(),
@@ -452,13 +465,15 @@ class DistillTrainer(BaseModel, arbitrary_types_allowed=True):
                 )
 
                 for i in range(inputs.shape[0]):
-                    img_idx = sample_batch.size() // WORLD_SIZE * gen_batch_idx + i
+                    img_idx = (
+                        sample_batch.size() // WORLD_SIZE * gen_batch_idx + i
+                    )
                     save_img(
                         inputs[i].detach(),
-                        f"{prefix}/generated_images/batch{int(iteration/self.save_every)}/generated_idx{img_idx}_gpu{LOCAL_RANK}.png",
+                        f"{prefix}/generated_images/batch{int(iteration / self.save_every)}/generated_idx{img_idx}_gpu{LOCAL_RANK}.png",
                     )
                 with open(
-                    f"{prefix}/generated_images/batch{int(iteration/self.save_every)}/label.json",
+                    f"{prefix}/generated_images/batch{int(iteration / self.save_every)}/label.json",
                     "w",
                 ) as fout:
                     fout.write(sample_batch.__str__())
@@ -507,13 +522,18 @@ class DistillTrainer(BaseModel, arbitrary_types_allowed=True):
                 sample_batch=sample_batch,
             )
             save_distill_results(
-                distill_results, self.work_dir, idx, self.skip_generated, self.device
+                distill_results,
+                self.work_dir,
+                idx,
+                self.skip_generated,
+                self.device,
             )
         self.save_data_manifest()
 
 
 def build_yolo_predictor(
-    model_pt: Path = Path("yolo11n.pt"), device: torch.device = torch.device("cpu")
+    model_pt: Path = Path("yolo11n.pt"),
+    device: torch.device = torch.device("cpu"),
 ) -> DetectionPredictor:
     args = dict(model=model_pt, device=device)
     predictor = DetectionPredictor(overrides=args)
@@ -524,7 +544,8 @@ def build_yolo_predictor(
 # build yolo teacher needs to de-Fuse batch normal layer
 # so it cannot use the default setup_model. must hand-write it.
 def build_yolo_teacher(
-    model_pt: Path = Path("yolo11n.pt"), device: torch.device = torch.device("cuda")
+    model_pt: Path = Path("yolo11n.pt"),
+    device: torch.device = torch.device("cuda"),
 ) -> Tuple[DetectionModel, List[BatchHook]]:
     from ultralytics.engine.predictor import AutoBackend  # type: ignore
 
@@ -581,13 +602,17 @@ def build_fp_sampler(
     )
 
 
-def build_distill_trainer(save_dir: Path, config: GenerationConfig) -> DistillTrainer:
+def build_distill_trainer(
+    save_dir: Path, config: GenerationConfig
+) -> DistillTrainer:
 
     device = torch.device(config.device)
 
     print(f"device is {device}")
 
-    teacher_model, hook_handlers = build_yolo_teacher(config.teacher_weights, device)
+    teacher_model, hook_handlers = build_yolo_teacher(
+        config.teacher_weights, device
+    )
 
     relabel_model = build_yolo_predictor(config.relabel_weights, device)
 

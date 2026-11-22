@@ -37,7 +37,9 @@ def generate_ddp_file(
 ):
     """Generates a DDP file and returns its file name."""
     module, name = (
-        f"{trainer.__class__.__module__}.{trainer.__class__.__name__}".rsplit(".", 1)
+        f"{trainer.__class__.__module__}.{trainer.__class__.__name__}".rsplit(
+            ".", 1
+        )
     )
 
     quantstr = f"""
@@ -81,9 +83,9 @@ if __name__ == "__main__":
     cfg = DEFAULT_CFG_DICT.copy()
     cfg.update(save_dir='')   # handle the extra key 'save_dir'
     trainer = {name}(cfg=cfg, overrides=overrides)
-    trainer.args.model = "{getattr(trainer.hub_session, 'model_url', trainer.args.model)}"
+    trainer.args.model = "{getattr(trainer.hub_session, "model_url", trainer.args.model)}"
     {gimg_str}
-    {kd_str if kd_str else ''}
+    {kd_str if kd_str else ""}
     trainer.set_quantize({quantstr})
     results = trainer.train()
 """
@@ -113,8 +115,12 @@ def generate_ddp_command(
 
     if not trainer.resume:
         shutil.rmtree(trainer.save_dir)  # remove the save_dir
-    file = generate_ddp_file(trainer, quant_mode, trainer.gimg_path, kd, calibration)
-    dist_cmd = "torch.distributed.run" if TORCH_1_9 else "torch.distributed.launch"
+    file = generate_ddp_file(
+        trainer, quant_mode, trainer.gimg_path, kd, calibration
+    )
+    dist_cmd = (
+        "torch.distributed.run" if TORCH_1_9 else "torch.distributed.launch"
+    )
     port = find_free_network_port()
     cmd = [
         sys.executable,

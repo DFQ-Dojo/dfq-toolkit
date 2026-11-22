@@ -43,8 +43,12 @@ def process_batch(detections, labels, iouv):
             )  # [label, detect, iou]
             if x[0].shape[0] > 1:
                 matches = matches[matches[:, 2].argsort()[::-1]]
-                matches = matches[np.unique(matches[:, 1], return_index=True)[1]]
-                matches = matches[np.unique(matches[:, 0], return_index=True)[1]]
+                matches = matches[
+                    np.unique(matches[:, 1], return_index=True)[1]
+                ]
+                matches = matches[
+                    np.unique(matches[:, 0], return_index=True)[1]
+                ]
             correct[matches[:, 1].astype(int), i] = True
     return torch.tensor(correct, dtype=torch.bool, device=iouv.device)
 
@@ -98,7 +102,9 @@ def calculate_batch(
                 pred.shape[0],
             )  # number of labels, predictions
             shape = sample_labels.original_shapes[si]
-            correct = torch.zeros(npr, niou, dtype=torch.bool, device=device)  # init
+            correct = torch.zeros(
+                npr, niou, dtype=torch.bool, device=device
+            )  # init
             seen += 1
 
             if npr == 0:
@@ -128,7 +134,9 @@ def calculate_batch(
                     tbox,
                     shape,
                 )  # native-space labels
-                labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
+                labelsn = torch.cat(
+                    (labels[:, 0:1], tbox), 1
+                )  # native-space labels
                 correct = process_batch(predn, labelsn, iouv)
             stats.append(
                 (correct, pred[:, 4], pred[:, 5], labels[:, 0])
@@ -200,7 +208,9 @@ class MetricCalculator(BaseModel, arbitrary_types_allowed=True):
                 idx,
             )
 
-            map50, map = calculate_map(seen, stats, work_dir, self.names, self.nc)
+            map50, map = calculate_map(
+                seen, stats, work_dir, self.names, self.nc
+            )
         return loss, loss_item, map50, map
 
 

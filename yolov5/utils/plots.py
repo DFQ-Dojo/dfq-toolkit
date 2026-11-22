@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageOps
 from scipy.ndimage.filters import gaussian_filter1d
 from ultralytics.utils.plotting import Annotator
 
-from utils import TryExcept, threaded
+from utils import TryExcept
 from utils.general import LOGGER, clip_boxes, increment_path, xywh2xyxy, xyxy2xywh
 from utils.metrics import fitness
 import json
@@ -76,9 +76,7 @@ class Colors:
 colors = Colors()  # create instance for 'from utils.plots import colors'
 
 
-def feature_visualization(
-    x, module_type, stage, n=32, save_dir=Path("runs/detect/exp")
-):
+def feature_visualization(x, module_type, stage, n=32, save_dir=Path("runs/detect/exp")):
     """
     x:              Features to be visualized
     module_type:    Module type
@@ -91,17 +89,11 @@ def feature_visualization(
     ):  # 'Detect' for Object Detect task,'Segment' for Segment task
         batch, channels, height, width = x.shape  # batch, channels, height, width
         if height > 1 and width > 1:
-            f = (
-                save_dir / f"stage{stage}_{module_type.split('.')[-1]}_features.png"
-            )  # filename
+            f = save_dir / f"stage{stage}_{module_type.split('.')[-1]}_features.png"  # filename
 
-            blocks = torch.chunk(
-                x[0].cpu(), channels, dim=0
-            )  # select batch index 0, block by channels
+            blocks = torch.chunk(x[0].cpu(), channels, dim=0)  # select batch index 0, block by channels
             n = min(n, channels)  # number of plots
-            fig, ax = plt.subplots(
-                math.ceil(n / 8), 8, tight_layout=True
-            )  # 8 rows x n/8 cols
+            fig, ax = plt.subplots(math.ceil(n / 8), 8, tight_layout=True)  # 8 rows x n/8 cols
             ax = ax.ravel()
             plt.subplots_adjust(wspace=0.05, hspace=0.05)
             for i in range(n):
@@ -187,26 +179,18 @@ def plot_images(images, targets, paths=None, fname="images.jpg", names=None):
 
     # Annotate
     fs = int((h + w) * ns * 0.01)  # font size
-    annotator = Annotator(
-        mosaic, line_width=round(fs / 10), font_size=fs, pil=True, example=names
-    )
+    annotator = Annotator(mosaic, line_width=round(fs / 10), font_size=fs, pil=True, example=names)
     for i in range(i + 1):
         x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
-        annotator.rectangle(
-            [x, y, x + w, y + h], None, (255, 255, 255), width=2
-        )  # borders
+        annotator.rectangle([x, y, x + w, y + h], None, (255, 255, 255), width=2)  # borders
         if paths:
-            annotator.text(
-                [x + 5, y + 5], text=Path(paths[i]).name[:40], txt_color=(220, 220, 220)
-            )  # filenames
+            annotator.text([x + 5, y + 5], text=Path(paths[i]).name[:40], txt_color=(220, 220, 220))  # filenames
         if len(targets) > 0:
             ti = targets[targets[:, 0] == i]  # image targets
             boxes = xywh2xyxy(ti[:, 2:6]).T
             classes = ti[:, 1].astype("int")
             labels = ti.shape[1] == 6  # labels if no conf column
-            conf = (
-                None if labels else ti[:, 6]
-            )  # check for confidence presence (label vs pred)
+            conf = None if labels else ti[:, 6]  # check for confidence presence (label vs pred)
 
             if boxes.shape[1]:
                 if boxes.max() <= 1.01:  # if normalized with tolerance 0.01
@@ -266,27 +250,19 @@ def plot_boxes(images, targets, paths=None, fname="images.jpg", names=None):
 
     # Annotate
     fs = int((h + w) * ns * 0.01)  # font size
-    annotator = Annotator(
-        mosaic, line_width=round(fs / 10), font_size=fs, pil=True, example=names
-    )
+    annotator = Annotator(mosaic, line_width=round(fs / 10), font_size=fs, pil=True, example=names)
     results = []
     for i in range(i + 1):
         x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
-        annotator.rectangle(
-            [x, y, x + w, y + h], None, (255, 255, 255), width=2
-        )  # borders
+        annotator.rectangle([x, y, x + w, y + h], None, (255, 255, 255), width=2)  # borders
         if paths:
-            annotator.text(
-                [x + 5, y + 5], text=Path(paths[i]).name[:40], txt_color=(220, 220, 220)
-            )  # filenames
+            annotator.text([x + 5, y + 5], text=Path(paths[i]).name[:40], txt_color=(220, 220, 220))  # filenames
         if len(targets) > 0:
             ti = targets[targets[:, 0] == i]  # image targets
             boxes = xywh2xyxy(ti[:, 2:6]).T
             classes = ti[:, 1].astype("int")
             labels = ti.shape[1] == 6  # labels if no conf column
-            conf = (
-                None if labels else ti[:, 6]
-            )  # check for confidence presence (label vs pred)
+            conf = None if labels else ti[:, 6]  # check for confidence presence (label vs pred)
 
             if boxes.shape[1]:
                 if boxes.max() <= 1.01:  # if normalized with tolerance 0.01
@@ -314,20 +290,14 @@ def plot_boxes(images, targets, paths=None, fname="images.jpg", names=None):
                     #     box[0] -= tmp_w
                     #     box[2] += tmp_w
                     extarct = annotator.im.crop(box)
-                    extarct = extarct.resize(
-                        (round(box_w * box_scale), round(box_h * box_scale))
-                    )
+                    extarct = extarct.resize((round(box_w * box_scale), round(box_h * box_scale)))
                     if w / box_w < h / box_h:
                         tmp_h = round((h - box_h * box_scale) / 2)
-                        extarct = ImageOps.expand(
-                            extarct, border=(0, tmp_h), fill="black"
-                        )
+                        extarct = ImageOps.expand(extarct, border=(0, tmp_h), fill="black")
                     else:
                         tmp_w = round((w - box_w * box_scale) / 2)
-                        extarct = ImageOps.expand(
-                            extarct, border=(tmp_w, 0), fill="black"
-                        )
-                    extarct.save(os.path.join(dirname, f"extract_{len(results)-1}.png"))
+                        extarct = ImageOps.expand(extarct, border=(tmp_w, 0), fill="black")
+                    extarct.save(os.path.join(dirname, f"extract_{len(results) - 1}.png"))
             for j, box in enumerate(boxes.T.tolist()):
                 cls = classes[j]
                 color = colors(cls)
@@ -484,9 +454,7 @@ def plot_labels(labels, names=(), save_dir=Path("")):
     ax = plt.subplots(2, 2, figsize=(8, 8), tight_layout=True)[1].ravel()
     y = ax[0].hist(c, bins=np.linspace(0, nc, nc + 1) - 0.5, rwidth=0.8)
     with contextlib.suppress(Exception):  # color histogram bars by class
-        [
-            y[2].patches[i].set_color([x / 255 for x in colors(i)]) for i in range(nc)
-        ]  # known issue #3195
+        [y[2].patches[i].set_color([x / 255 for x in colors(i)]) for i in range(nc)]  # known issue #3195
     ax[0].set_ylabel("instances")
     if 0 < len(names) < 30:
         ax[0].set_xticks(range(len(names)))
@@ -514,9 +482,7 @@ def plot_labels(labels, names=(), save_dir=Path("")):
     plt.close()
 
 
-def imshow_cls(
-    im, labels=None, pred=None, names=None, nmax=25, verbose=False, f=Path("images.jpg")
-):
+def imshow_cls(im, labels=None, pred=None, names=None, nmax=25, verbose=False, f=Path("images.jpg")):
     """Displays a grid of images with optional labels and predictions, saving to a file."""
     from utils.augmentations import denormalize
 
@@ -540,9 +506,7 @@ def imshow_cls(
     if verbose:
         LOGGER.info(f"Saving {f}")
         if labels is not None:
-            LOGGER.info(
-                "True:     " + " ".join(f"{names[i]:3s}" for i in labels[:nmax])
-            )
+            LOGGER.info("True:     " + " ".join(f"{names[i]:3s}" for i in labels[:nmax]))
         if pred is not None:
             LOGGER.info("Predicted:" + " ".join(f"{names[i]:3s}" for i in pred[:nmax]))
     return f
@@ -567,9 +531,7 @@ def plot_evolve(evolve_csv="path/to/evolve.csv"):
         v = x[:, 7 + i]
         mu = v[j]  # best single result
         plt.subplot(6, 5, i + 1)
-        plt.scatter(
-            v, f, c=hist2d(v, f, 20), cmap="viridis", alpha=0.8, edgecolors="none"
-        )
+        plt.scatter(v, f, c=hist2d(v, f, 20), cmap="viridis", alpha=0.8, edgecolors="none")
         plt.plot(mu, f.max(), "k+", markersize=15)
         plt.title(f"{k} = {mu:.3g}", fontdict={"size": 9})  # limit to 40 characters
         if i % 5 != 0:
@@ -591,9 +553,7 @@ def plot_results(file="path/to/results.csv", dir=""):
     fig, ax = plt.subplots(2, 5, figsize=(12, 6), tight_layout=True)
     ax = ax.ravel()
     files = list(save_dir.glob("results*.csv"))
-    assert len(
-        files
-    ), f"No results.csv files found in {save_dir.resolve()}, nothing to plot."
+    assert len(files), f"No results.csv files found in {save_dir.resolve()}, nothing to plot."
     for f in files:
         try:
             data = pd.read_csv(f)
@@ -602,12 +562,8 @@ def plot_results(file="path/to/results.csv", dir=""):
             for i, j in enumerate([1, 2, 3, 4, 5, 8, 9, 10, 6, 7]):
                 y = data.values[:, j].astype("float")
                 # y[y == 0] = np.nan  # don't show zero values
-                ax[i].plot(
-                    x, y, marker=".", label=f.stem, linewidth=2, markersize=8
-                )  # actual results
-                ax[i].plot(
-                    x, gaussian_filter1d(y, sigma=3), ":", label="smooth", linewidth=2
-                )  # smoothing line
+                ax[i].plot(x, y, marker=".", label=f.stem, linewidth=2, markersize=8)  # actual results
+                ax[i].plot(x, gaussian_filter1d(y, sigma=3), ":", label="smooth", linewidth=2)  # smoothing line
                 ax[i].set_title(s[j], fontsize=12)
                 # if j in [8, 9, 10]:  # share train and val loss y axes
                 #     ax[i].get_shared_y_axes().join(ax[i], ax[i - 5])
@@ -668,9 +624,7 @@ def profile_idetection(start=0, stop=0, labels=(), save_dir=""):
     plt.savefig(Path(save_dir) / "idetection_profile.png", dpi=200)
 
 
-def save_one_box(
-    xyxy, im, file=Path("im.jpg"), gain=1.02, pad=10, square=False, BGR=False, save=True
-):
+def save_one_box(xyxy, im, file=Path("im.jpg"), gain=1.02, pad=10, square=False, BGR=False, save=True):
     """Crops and saves an image from bounding box `xyxy`, applied with `gain` and `pad`, optionally squares and adjusts
     for BGR.
     """

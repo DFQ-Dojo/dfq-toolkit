@@ -1,9 +1,6 @@
-import math
 import torch
 import torch.nn as nn
 from functools import partial
-import os
-from network_files.image_list import ImageList
 from .loggers import loggers
 
 from .kl_div import KLDivergence
@@ -66,10 +63,10 @@ class KDLoss:
         self._register_forward_hook(student, module, teacher=False)
         self._register_forward_hook(teacher, module, teacher=True)
         loggers["student"].info(
-            f'{"*"*10} Architecture: {"*"*10}\n{student}\n\n\n{"*"*10} Layer: {"*"*10}'
+            f"{'*' * 10} Architecture: {'*' * 10}\n{student}\n\n\n{'*' * 10} Layer: {'*' * 10}"
         )
         loggers["teacher"].info(
-            f'{"*"*10} Architecture: {"*"*10}\n{teacher}\n\n\n{"*"*10} Layer: {"*"*10}'
+            f"{'*' * 10} Architecture: {'*' * 10}\n{teacher}\n\n\n{'*' * 10} Layer: {'*' * 10}"
         )
 
         teacher.train()
@@ -94,7 +91,9 @@ class KDLoss:
         if len(self.student_mse_out) > len(self.teacher_mse_out):
             # import IPython; IPython.embed()
             initial_len = len(self.student_mse_out)
-            self.student_mse_out = self.student_mse_out[-len(self.teacher_mse_out) :]
+            self.student_mse_out = self.student_mse_out[
+                -len(self.teacher_mse_out) :
+            ]
             print(
                 f"clip len of student out from {initial_len} to {len(self.student_mse_out)}"
             )
@@ -139,7 +138,9 @@ class KDLoss:
                 if any(isinstance(m, layer) for layer in mse_dict[name]):
                     print(f"layer {k} add hook")
                     m.register_forward_hook(
-                        partial(self._forward_hook, teacher=teacher, name="mse " + k)
+                        partial(
+                            self._forward_hook, teacher=teacher, name="mse " + k
+                        )
                     )
 
     def _recursive_len(self, input):
@@ -179,12 +180,12 @@ class KDLoss:
                             out["scores"].unsqueeze(0) for out in output[0]
                         ]
                         loggers["teacher"].info(
-                            f'{name}, output shape is {self._recursive_len([out["scores"] for out in output[0]])}\n\n'
+                            f"{name}, output shape is {self._recursive_len([out['scores'] for out in output[0]])}\n\n"
                         )
                     else:
                         self._student_kd_out = [
                             out["scores"].unsqueeze(0) for out in output[0]
                         ]
                         loggers["student"].info(
-                            f'{name}, output shape is {self._recursive_len([out["scores"] for out in output[0]])}\n\n'
+                            f"{name}, output shape is {self._recursive_len([out['scores'] for out in output[0]])}\n\n"
                         )

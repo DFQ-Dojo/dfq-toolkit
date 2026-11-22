@@ -23,12 +23,15 @@ from pydantic import Field, ValidationError
 CONFIG_ENVIRON_KEY = "GENERATION_CONFIG"
 
 CONFIG_FILE: Optional[Path] = (
-    Path(os.environ[CONFIG_ENVIRON_KEY]) if os.environ.get(CONFIG_ENVIRON_KEY) else None
+    Path(os.environ[CONFIG_ENVIRON_KEY])
+    if os.environ.get(CONFIG_ENVIRON_KEY)
+    else None
 )
 
 
-class GenOptions(BaseSettings, cli_parse_args=True, cli_prog_name="QAT training"):
-
+class GenOptions(
+    BaseSettings, cli_parse_args=True, cli_prog_name="QAT training"
+):
     model_config = SettingsConfigDict(json_file=CONFIG_FILE)
 
     model_name: str = Field(description="generation model name")
@@ -100,9 +103,9 @@ def generate_data(batch_size, p_model, device, hooks, model_name):
     optimizer = optim.Adam([img], lr=lr, betas=[0.5, 0.9], eps=1e-8)
 
     # Set pseudo labels
-    pred = torch.LongTensor([random.randint(0, 999) for _ in range(batch_size)]).to(
-        device
-    )
+    pred = torch.LongTensor(
+        [random.randint(0, 999) for _ in range(batch_size)]
+    ).to(device)
     var_pred = random.uniform(2500, 3000)  # for batch_size 32
 
     criterion = nn.CrossEntropyLoss()
@@ -120,7 +123,7 @@ def generate_data(batch_size, p_model, device, hooks, model_name):
 
         with tqdm(range(iterations_per_layer)) as pbar:
             for itr in pbar:
-                pbar.set_description(f"Epochs {lr_it+1}/{2}")
+                pbar.set_description(f"Epochs {lr_it + 1}/{2}")
 
                 # Learning rate scheduling
                 lr_scheduler(optimizer, itr, itr)
@@ -149,7 +152,9 @@ def generate_data(batch_size, p_model, device, hooks, model_name):
                     attention = hooks[itr_hook].feature
                     attention_p = attention.mean(dim=1)[:, 1:, :]
                     sims = torch.cosine_similarity(
-                        attention_p.unsqueeze(1), attention_p.unsqueeze(2), dim=3
+                        attention_p.unsqueeze(1),
+                        attention_p.unsqueeze(2),
+                        dim=3,
                     )
 
                     # Compute differential entropy
@@ -162,7 +167,9 @@ def generate_data(batch_size, p_model, device, hooks, model_name):
                         .to(device)
                     )
                     kde_estimate = kde(x_plot)
-                    dif_entropy_estimated = differential_entropy(kde_estimate, x_plot)
+                    dif_entropy_estimated = differential_entropy(
+                        kde_estimate, x_plot
+                    )
                     loss_entropy -= dif_entropy_estimated
 
                 # Combine loss
@@ -195,7 +202,10 @@ def get_image_prior_losses(inputs_jit):
     diff4 = inputs_jit[:, :, :-1, :-1] - inputs_jit[:, :, 1:, 1:]
 
     loss_var_l2 = (
-        torch.norm(diff1) + torch.norm(diff2) + torch.norm(diff3) + torch.norm(diff4)
+        torch.norm(diff1)
+        + torch.norm(diff2)
+        + torch.norm(diff3)
+        + torch.norm(diff4)
     )
     return loss_var_l2
 
@@ -210,7 +220,9 @@ def clip(image_tensor, use_fp16=False):
         std = np.array([0.229, 0.224, 0.225])
     for c in range(3):
         m, s = mean[c], std[c]
-        image_tensor[:, c] = torch.clamp(image_tensor[:, c], -m / s, (1 - m) / s)
+        image_tensor[:, c] = torch.clamp(
+            image_tensor[:, c], -m / s, (1 - m) / s
+        )
         # image_tensor[:, c] = torch.clamp(image_tensor[:, c], 0, 1)
     return image_tensor
 
@@ -259,7 +271,9 @@ def main():
             hooks.append(AttentionMap(m.attn.matmul2))
 
     for idx in range(0, opt.calibration_size, opt.batch_size):
-        outputs = generate_data(opt.batch_size, p_model, device, hooks, opt.model_name)
+        outputs = generate_data(
+            opt.batch_size, p_model, device, hooks, opt.model_name
+        )
         save_generated(outputs, opt.work_dir, idx, device)
 
 

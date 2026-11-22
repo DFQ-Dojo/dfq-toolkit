@@ -1,6 +1,4 @@
 import torch
-from typing import Tuple
-from torch import Tensor
 import torchvision
 
 
@@ -125,7 +123,8 @@ def clip_boxes_to_image(boxes, size):
             boxes_y, torch.tensor(0, dtype=boxes.dtype, device=boxes.device)
         )
         boxes_y = torch.min(
-            boxes_y, torch.tensor(height, dtype=boxes.dtype, device=boxes.device)
+            boxes_y,
+            torch.tensor(height, dtype=boxes.dtype, device=boxes.device),
         )
     else:
         boxes_x = boxes_x.clamp(min=0, max=width)

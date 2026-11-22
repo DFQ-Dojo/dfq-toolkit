@@ -100,7 +100,9 @@ class BackboneWithFPN(nn.Module):
 
         if re_getter:
             assert return_layers is not None
-            self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
+            self.body = IntermediateLayerGetter(
+                backbone, return_layers=return_layers
+            )
         else:
             self.body = backbone
 
@@ -156,7 +158,9 @@ class FeaturePyramidNetwork(nn.Module):
                 continue
             if i == 0 or mode == "exact":
                 inner_block_module = nn.Conv2d(in_channels, out_channels, 1)
-                layer_block_module = nn.Conv2d(out_channels, out_channels, 3, padding=1)
+                layer_block_module = nn.Conv2d(
+                    out_channels, out_channels, 3, padding=1
+                )
             elif mode.startswith("lsq_"):
                 inner_block_module = LSQconv2d(
                     in_channels,
@@ -238,9 +242,13 @@ class FeaturePyramidNetwork(nn.Module):
         for idx in range(len(x) - 2, -1, -1):
             inner_lateral = self.get_result_from_inner_blocks(x[idx], idx)
             feat_shape = inner_lateral.shape[-2:]
-            inner_top_down = F.interpolate(last_inner, size=feat_shape, mode="nearest")
+            inner_top_down = F.interpolate(
+                last_inner, size=feat_shape, mode="nearest"
+            )
             last_inner = inner_lateral + inner_top_down
-            results.insert(0, self.get_result_from_layer_blocks(last_inner, idx))
+            results.insert(
+                0, self.get_result_from_layer_blocks(last_inner, idx)
+            )
 
         if self.extra_blocks is not None:
             results, names = self.extra_blocks(results, x, names)

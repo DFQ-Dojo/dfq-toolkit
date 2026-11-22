@@ -19,7 +19,10 @@ from ultralytics.models import yolo
 from ultralytics.nn.tasks import DetectionModel
 from ultralytics.utils import LOGGER, RANK
 from ultralytics.utils.plotting import plot_images, plot_labels, plot_results
-from ultralytics.utils.torch_utils import de_parallel, torch_distributed_zero_first
+from ultralytics.utils.torch_utils import (
+    de_parallel,
+    torch_distributed_zero_first,
+)
 
 
 class DetectionTrainer(BaseTrainer):
@@ -45,7 +48,9 @@ class DetectionTrainer(BaseTrainer):
             mode (str): `train` mode or `val` mode, users are able to customize different augmentations for each mode.
             batch (int, optional): Size of batches, this is for `rect`. Defaults to None.
         """
-        gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
+        gs = max(
+            int(de_parallel(self.model).stride.max() if self.model else 0), 32
+        )
         return build_yolo_dataset(
             self.args,
             img_path,
@@ -76,7 +81,9 @@ class DetectionTrainer(BaseTrainer):
 
     def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode="train"):
         """Construct and return dataloader."""
-        assert mode in {"train", "val"}, f"Mode must be 'train' or 'val', not {mode}."
+        assert mode in {"train", "val"}, (
+            f"Mode must be 'train' or 'val', not {mode}."
+        )
 
         if mode == "train" and self.use_generated:
             return self.build_gimg_dataset(self.gimg_path, batch_size, rank)
@@ -91,7 +98,9 @@ class DetectionTrainer(BaseTrainer):
                 "WARNING ⚠️ 'rect=True' is incompatible with DataLoader shuffle, setting shuffle=False"
             )
             shuffle = False
-        workers = self.args.workers if mode == "train" else self.args.workers * 2
+        workers = (
+            self.args.workers if mode == "train" else self.args.workers * 2
+        )
         return build_dataloader(
             dataset, batch_size, workers, shuffle, rank
         )  # return dataloader
@@ -105,7 +114,8 @@ class DetectionTrainer(BaseTrainer):
             imgs = batch["img"]
             sz = (
                 random.randrange(
-                    int(self.args.imgsz * 0.5), int(self.args.imgsz * 1.5 + self.stride)
+                    int(self.args.imgsz * 0.5),
+                    int(self.args.imgsz * 1.5 + self.stride),
                 )
                 // self.stride
                 * self.stride
@@ -134,7 +144,9 @@ class DetectionTrainer(BaseTrainer):
 
     def get_model(self, cfg=None, weights=None, verbose=True):
         """Return a YOLO detection model."""
-        model = DetectionModel(cfg, nc=self.data["nc"], verbose=verbose and RANK == -1)
+        model = DetectionModel(
+            cfg, nc=self.data["nc"], verbose=verbose and RANK == -1
+        )
         if weights:
             model.load(weights)
         return model
@@ -195,7 +207,9 @@ class DetectionTrainer(BaseTrainer):
         boxes = np.concatenate(
             [lb["bboxes"] for lb in self.train_loader.dataset.labels], 0
         )
-        cls = np.concatenate([lb["cls"] for lb in self.train_loader.dataset.labels], 0)
+        cls = np.concatenate(
+            [lb["cls"] for lb in self.train_loader.dataset.labels], 0
+        )
         plot_labels(
             boxes,
             cls.squeeze(),
@@ -206,9 +220,13 @@ class DetectionTrainer(BaseTrainer):
 
     def auto_batch(self):
         """Get batch size by calculating memory occupation of model."""
-        train_dataset = self.build_dataset(self.trainset, mode="train", batch=16)
+        train_dataset = self.build_dataset(
+            self.trainset, mode="train", batch=16
+        )
         # 4 for mosaic augmentation
-        max_num_obj = max(len(label["cls"]) for label in train_dataset.labels) * 4
+        max_num_obj = (
+            max(len(label["cls"]) for label in train_dataset.labels) * 4
+        )
         return super().auto_batch(max_num_obj)
 
     def set_quantize(self, quantize_mode: QuantizeMode):

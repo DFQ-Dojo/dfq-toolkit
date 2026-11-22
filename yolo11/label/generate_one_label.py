@@ -61,17 +61,20 @@ def populate(args):
     os.makedirs(os.path.join(args.outdir, "labels", "train2017"))
     train_imgs = []
     for imgIdx in tqdm(range(args.numImages)):
-
         # box: w,h,x,y
         width = MINDIM + (MAXDIM - MINDIM) * np.random.rand()
         height = MINDIM + (MAXDIM - MINDIM) * np.random.rand()
-        x = 0.5 + (0.5 - width / 2.0) * np.random.rand() * np.random.choice([1, -1])
-        y = 0.5 + (0.5 - height / 2.0) * np.random.rand() * np.random.choice([1, -1])
+        x = 0.5 + (0.5 - width / 2.0) * np.random.rand() * np.random.choice(
+            [1, -1]
+        )
+        y = 0.5 + (0.5 - height / 2.0) * np.random.rand() * np.random.choice(
+            [1, -1]
+        )
         assert x + width / 2.0 <= 1.0, "overflow width, x+width/2.0={}".format(
             x + width / 2.0
         )
-        assert y + height / 2.0 <= 1.0, "overflow height, y+height/2.0={}".format(
-            y + height / 2.0
+        assert y + height / 2.0 <= 1.0, (
+            "overflow height, y+height/2.0={}".format(y + height / 2.0)
         )
 
         # class
@@ -85,9 +88,12 @@ def populate(args):
 
         # save
         outfile = "COCO_train2017_{:012d}".format(imgIdx + 1)
-        im.save(os.path.join(args.outdir, "images", "train2017", outfile + ".jpg"))
+        im.save(
+            os.path.join(args.outdir, "images", "train2017", outfile + ".jpg")
+        )
         with open(
-            os.path.join(args.outdir, "labels", "train2017", outfile + ".txt"), "wt"
+            os.path.join(args.outdir, "labels", "train2017", outfile + ".txt"),
+            "wt",
         ) as f:
             f.write(_label_str)
         train_imgs.append(f"./images/train2017/{outfile}.jpg")
@@ -96,19 +102,31 @@ def populate(args):
             line = img + "\n"
             fout.write(line)
 
+
 def pmain(args):
     init_seeds(args.seed + 1, deterministic=True)
     populate(args)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="populate single box per image labels")
-    parser.add_argument(
-        "--numImages", type=int, default=120, help="number of images to generate"
+    parser = argparse.ArgumentParser(
+        description="populate single box per image labels"
     )
-    parser.add_argument("--numClasses", type=int, default=80, help="number of classes")
-    parser.add_argument("--outdir", type=str, required=True, help="output directory")
-    parser.add_argument("--seed", type=int, default=0, help="Global training seed")
+    parser.add_argument(
+        "--numImages",
+        type=int,
+        default=120,
+        help="number of images to generate",
+    )
+    parser.add_argument(
+        "--numClasses", type=int, default=80, help="number of classes"
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="output directory"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=0, help="Global training seed"
+    )
 
     args = parser.parse_args()
     pmain(args)
-    

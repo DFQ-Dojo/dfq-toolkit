@@ -72,7 +72,9 @@ class KDLoss:
             kd_loss = self.kd_loss(self._student_kd_out, self._teacher_kd_out)
             # print(f"unweighted kd loss is {kd_loss.item()}")
             total_loss += kd_loss * self.kd_loss_weight
-            loss_items["kldiv_loss"] = kd_loss.detach().item() * self.kd_loss_weight
+            loss_items["kldiv_loss"] = (
+                kd_loss.detach().item() * self.kd_loss_weight
+            )
             del self._student_kd_out, self._teacher_kd_out
             self._student_kd_out = []
             self._teacher_kd_out = []
@@ -81,7 +83,9 @@ class KDLoss:
                 self._student_mse_out, self._teacher_mse_out
             )
             total_loss += mse_loss * self.mse_loss_weight
-            loss_items["mse_loss"] = mse_loss.detach().item() * self.mse_loss_weight
+            loss_items["mse_loss"] = (
+                mse_loss.detach().item() * self.mse_loss_weight
+            )
             del mse_loss_items, self._student_mse_out, self._teacher_mse_out
             self._student_mse_out = []
             self._teacher_mse_out = []
@@ -94,14 +98,18 @@ class KDLoss:
     def _register_hook_teacher(self):
         self.teacher.rpn_head.register_forward_hook(self._kl_hook_teacher)
         for k, m in self.teacher.named_modules():
-            if any(isinstance(m, layer) for layer in mse_dict[self.mse_modules]):
+            if any(
+                isinstance(m, layer) for layer in mse_dict[self.mse_modules]
+            ):
                 print(f"layer {k} add hook for teacher")
                 m.register_forward_hook(self._mse_hook_teacher)
 
     def _register_hook_student(self):
         self.student.rpn_head.register_forward_hook(self._kl_hook_student)
         for k, m in self.student.named_modules():
-            if any(isinstance(m, layer) for layer in mse_dict[self.mse_modules]):
+            if any(
+                isinstance(m, layer) for layer in mse_dict[self.mse_modules]
+            ):
                 print(f"layer {k} add hook for student")
                 m.register_forward_hook(self._mse_hook_student)
 
@@ -114,7 +122,10 @@ class KDLoss:
         self._student_mse_out.append(output)
 
     def _kl_hook_teacher(
-        self, module, input, output: Tuple[List[torch.Tensor], List[torch.Tensor]]
+        self,
+        module,
+        input,
+        output: Tuple[List[torch.Tensor], List[torch.Tensor]],
     ):
         # output shape:
         #   (List[Tensor]: cls_scores for five scales,

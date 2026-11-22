@@ -1,4 +1,3 @@
-import math
 import torch
 import torch.nn as nn
 from functools import partial
@@ -86,20 +85,14 @@ class KDLoss:
         if len(self._student_mse_out) > len(self._teacher_mse_out):
             initial_len = len(self._student_mse_out)
             self._student_mse_out = self._student_mse_out[-len(self._teacher_mse_out) :]
-            print(
-                f"clip len of student out from {initial_len} to {len(self._student_mse_out)}"
-            )
+            print(f"clip len of student out from {initial_len} to {len(self._student_mse_out)}")
 
         if self.kd_loss is not None:
-            kd_loss, kd_loss_items = self.kd_loss(
-                self._student_kd_out, self._teacher_kd_out[1]
-            )
+            kd_loss, kd_loss_items = self.kd_loss(self._student_kd_out, self._teacher_kd_out[1])
             total_loss += kd_loss * self.kd_loss_weight
             del self._student_kd_out, self._teacher_kd_out
         if self.mse_loss is not None:
-            mse_loss, mse_loss_items = self.mse_loss(
-                self._student_mse_out, self._teacher_mse_out
-            )
+            mse_loss, mse_loss_items = self.mse_loss(self._student_mse_out, self._teacher_mse_out)
             total_loss += mse_loss * self.mse_loss_weight
             self._student_mse_out, self._teacher_mse_out = [], []
         #
@@ -111,20 +104,14 @@ class KDLoss:
         if name == "":
             # use the output of model
             # print(f'register hook, teacher is {teacher}')
-            model.register_forward_hook(
-                partial(self._forward_hook, teacher=teacher, name="")
-            )
+            model.register_forward_hook(partial(self._forward_hook, teacher=teacher, name=""))
         else:
             # module = None
-            model.register_forward_hook(
-                partial(self._forward_hook, teacher=teacher, name="")
-            )
+            model.register_forward_hook(partial(self._forward_hook, teacher=teacher, name=""))
             for k, m in model.named_modules():
                 if any(isinstance(m, layer) for layer in mse_dict[name]):
                     print(f"layer {k} add hook")
-                    m.register_forward_hook(
-                        partial(self._forward_hook, teacher=teacher, name="layer" + k)
-                    )
+                    m.register_forward_hook(partial(self._forward_hook, teacher=teacher, name="layer" + k))
 
     def _forward_hook(self, module, input, output, teacher=False, name=""):
         # three output [batch_size, 3, 20, 20, 85]; [batch_size, 3, 40, 40, 85]; [batch_size, 3, 80, 80, 85]
@@ -140,6 +127,4 @@ class KDLoss:
                     tmp = [out.reshape(out.shape[0], -1) for out in output[1]]
                     self._teacher_kd_out = (None, tmp)
                 else:
-                    self._student_kd_out = [
-                        out.reshape(out.shape[0], -1) for out in output
-                    ]
+                    self._student_kd_out = [out.reshape(out.shape[0], -1) for out in output]

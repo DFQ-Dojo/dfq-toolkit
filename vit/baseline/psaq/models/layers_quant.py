@@ -6,7 +6,11 @@ import collections.abc
 import torch
 from torch import nn
 
-from baseline.psaq.models.quantization_utils import QuantLinear, QuantConv2d, QuantAct
+from baseline.psaq.models.quantization_utils import (
+    QuantLinear,
+    QuantConv2d,
+    QuantAct,
+)
 
 
 def _ntuple(n):
@@ -94,7 +98,9 @@ def drop_path(x, drop_prob: float = 0.0, training: bool = False):
     shape = (x.shape[0],) + (1,) * (
         x.ndim - 1
     )  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
+    random_tensor = keep_prob + torch.rand(
+        shape, dtype=x.dtype, device=x.device
+    )
     random_tensor.floor_()  # binarize
     output = x.div(keep_prob) * random_tensor
     return output
@@ -160,7 +166,10 @@ class PatchEmbed(nn.Module):
         self.img_size = img_size
         self.patch_size = patch_size
 
-        self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
+        self.grid_size = (
+            img_size[0] // patch_size[0],
+            img_size[1] // patch_size[1],
+        )
         self.num_patches = self.grid_size[0] * self.grid_size[1]
 
         self.proj = QuantConv2d(
@@ -182,9 +191,9 @@ class PatchEmbed(nn.Module):
     def forward(self, x):
         B, C, H, W = x.shape
         # FIXME look at relaxing size constraints
-        assert (
-            H == self.img_size[0] and W == self.img_size[1]
-        ), f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+        assert H == self.img_size[0] and W == self.img_size[1], (
+            f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+        )
         x = self.proj(x).flatten(2).transpose(1, 2)
         x = self.QuantAct_before_norm(x)
         x = self.norm(x)
@@ -198,7 +207,12 @@ class HybridEmbed(nn.Module):
     """
 
     def __init__(
-        self, backbone, img_size=224, feature_size=None, in_chans=3, embed_dim=768
+        self,
+        backbone,
+        img_size=224,
+        feature_size=None,
+        in_chans=3,
+        embed_dim=768,
     ):
         super().__init__()
         assert isinstance(backbone, nn.Module)
@@ -213,7 +227,9 @@ class HybridEmbed(nn.Module):
                 training = backbone.training
                 if training:
                     backbone.eval()
-                o = self.backbone(torch.zeros(1, in_chans, img_size[0], img_size[1]))
+                o = self.backbone(
+                    torch.zeros(1, in_chans, img_size[0], img_size[1])
+                )
                 if isinstance(o, (list, tuple)):
                     # last feature if backbone outputs list/tuple of features
                     o = o[-1]

@@ -1,4 +1,3 @@
-import copy
 import math
 import torch
 import torch.nn as nn
@@ -61,31 +60,11 @@ class FunLSQ(Function):
         bigger = (q_w > Qp).float()  # bool值转浮点值，1.0或者0.0
         between = 1.0 - smaller - bigger  # 得到位于量化区间的index
         if per_channel:
-            grad_alpha = (
-                (
-                    smaller * Qn
-                    + bigger * Qp
-                    + between * Round.apply(q_w)
-                    - between * q_w
-                )
-                * grad_weight
-                * g
-            )
-            grad_alpha = (
-                grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
-            )
+            grad_alpha = (smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g
+            grad_alpha = grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
         else:
             grad_alpha = (
-                (
-                    (
-                        smaller * Qn
-                        + bigger * Qp
-                        + between * Round.apply(q_w)
-                        - between * q_w
-                    )
-                    * grad_weight
-                    * g
-                )
+                ((smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g)
                 .sum()
                 .unsqueeze(dim=0)
             )  # ?
@@ -113,16 +92,7 @@ class ALSQPlus(Function):
         bigger = (q_w > Qp).float()  # bool值转浮点值，1.0或者0.0
         between = 1.0 - smaller - bigger  # 得到位于量化区间的index
         grad_alpha = (
-            (
-                (
-                    smaller * Qn
-                    + bigger * Qp
-                    + between * Round.apply(q_w)
-                    - between * q_w
-                )
-                * grad_weight
-                * g
-            )
+            ((smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g)
             .sum()
             .unsqueeze(dim=0)
         )
@@ -171,31 +141,11 @@ class WLSQPlus(Function):
         bigger = (q_w > Qp).float()  # bool值转浮点值，1.0或者0.0
         between = 1.0 - smaller - bigger  # 得到位于量化区间的index
         if per_channel:
-            grad_alpha = (
-                (
-                    smaller * Qn
-                    + bigger * Qp
-                    + between * Round.apply(q_w)
-                    - between * q_w
-                )
-                * grad_weight
-                * g
-            )
-            grad_alpha = (
-                grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
-            )
+            grad_alpha = (smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g
+            grad_alpha = grad_alpha.contiguous().view(grad_alpha.size()[0], -1).sum(dim=1)
         else:
             grad_alpha = (
-                (
-                    (
-                        smaller * Qn
-                        + bigger * Qp
-                        + between * Round.apply(q_w)
-                        - between * q_w
-                    )
-                    * grad_weight
-                    * g
-                )
+                ((smaller * Qn + bigger * Qp + between * Round.apply(q_w) - between * q_w) * grad_weight * g)
                 .sum()
                 .unsqueeze(dim=0)
             )
@@ -269,15 +219,9 @@ class LSQPlusActivationQuantizer(nn.Module):
                     self.g = 1.0 / math.sqrt(activation.numel() * self.Qp)
                     mina = torch.min(activation.detach())
                     if self.mode == "lsqplus":
-                        new_s_data = (torch.max(activation.detach()) - mina) / (
-                            self.Qp - self.Qn
-                        )
+                        new_s_data = (torch.max(activation.detach()) - mina) / (self.Qp - self.Qn)
                     elif self.mode == "lsq":
-                        new_s_data = (
-                            torch.mean(torch.abs(activation.detach()))
-                            * 2
-                            / (math.sqrt(self.Qp))
-                        )
+                        new_s_data = torch.mean(torch.abs(activation.detach())) * 2 / (math.sqrt(self.Qp))
                     new_beta_data = mina - new_s_data * self.Qn
                     self.beta.data.copy_(new_beta_data)
                     self.s.data.copy_(new_s_data)
@@ -287,17 +231,15 @@ class LSQPlusActivationQuantizer(nn.Module):
                 elif self.init_state < self.batch_init:
                     mina = torch.min(activation.detach())
                     if self.mode == "lsqplus":
-                        new_s_data = self.s.data * 0.9 + 0.1 * (
-                            torch.max(activation.detach()) - mina
-                        ) / (self.Qp - self.Qn)
+                        new_s_data = self.s.data * 0.9 + 0.1 * (torch.max(activation.detach()) - mina) / (
+                            self.Qp - self.Qn
+                        )
                     elif self.mode == "lsq":
-                        new_s_data = self.s.data * 0.9 + 0.1 * torch.mean(
-                            torch.abs(activation.detach())
-                        ) * 2 / (math.sqrt(self.Qp))
+                        new_s_data = self.s.data * 0.9 + 0.1 * torch.mean(torch.abs(activation.detach())) * 2 / (
+                            math.sqrt(self.Qp)
+                        )
                     self.s.data.copy_(new_s_data)
-                    new_beta_data = self.s.data * 0.9 + 0.1 * (
-                        mina - self.s.data * self.Qn
-                    )
+                    new_beta_data = self.s.data * 0.9 + 0.1 * (mina - self.s.data * self.Qn)
                     self.beta.data.copy_(new_beta_data)
                     self.init_state += 1
                 elif self.init_state == self.batch_init:
@@ -313,9 +255,7 @@ class LSQPlusActivationQuantizer(nn.Module):
             assert self.a_bits != 1
         else:
             if self.mode == "lsqplus":
-                q_a = ALSQPlus.apply(
-                    activation, self.s, self.g, self.Qn, self.Qp, self.beta
-                )
+                q_a = ALSQPlus.apply(activation, self.s, self.g, self.Qn, self.Qp, self.beta)
             elif self.mode == "lsq":
                 q_a = FunLSQ.apply(activation, self.s, self.g, self.Qn, self.Qp)
         return q_a
@@ -367,16 +307,9 @@ class LSQPlusWeightQuantizer(nn.Module):
                         self.div = 2**self.w_bits - 1
                         mean = torch.mean(weight.detach())
                         std = torch.std(weight.detach())
-                        new_s_data = (
-                            max([torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)])
-                            / self.div
-                        )
+                        new_s_data = max([torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]) / self.div
                     elif self.mode == "lsq":
-                        new_s_data = (
-                            torch.mean(torch.abs(weight.detach()))
-                            * 2
-                            / (math.sqrt(self.Qp))
-                        )
+                        new_s_data = torch.mean(torch.abs(weight.detach())) * 2 / (math.sqrt(self.Qp))
                     self.s.data.copy_(new_s_data)
                     self.init_state += 1
                     print(f"initial weight scale to {self.s.data}")
@@ -387,16 +320,12 @@ class LSQPlusWeightQuantizer(nn.Module):
                         std = torch.std(weight.detach())
                         new_s_data = (
                             self.s.data * 0.9
-                            + 0.1
-                            * max(
-                                [torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]
-                            )
-                            / self.div
+                            + 0.1 * max([torch.abs(mean - 3 * std), torch.abs(mean + 3 * std)]) / self.div
                         )
                     elif self.mode == "lsq":
-                        new_s_data = self.s.data * 0.9 + 0.1 * torch.mean(
-                            torch.abs(weight.detach())
-                        ) * 2 / (math.sqrt(self.Qp))
+                        new_s_data = self.s.data * 0.9 + 0.1 * torch.mean(torch.abs(weight.detach())) * 2 / (
+                            math.sqrt(self.Qp)
+                        )
                     self.s.data.copy_(new_s_data)
                     self.init_state += 1
                 elif self.init_state == self.batch_init:
@@ -411,13 +340,9 @@ class LSQPlusWeightQuantizer(nn.Module):
             assert self.w_bits != 1
         else:
             if self.mode == "lsqplus":
-                w_q = WLSQPlus.apply(
-                    weight, self.s, self.g, self.Qn, self.Qp, self.per_channel
-                )
+                w_q = WLSQPlus.apply(weight, self.s, self.g, self.Qn, self.Qp, self.per_channel)
             elif self.mode == "lsq":
-                w_q = FunLSQ.apply(
-                    weight, self.s, self.g, self.Qn, self.Qp, self.per_channel
-                )
+                w_q = FunLSQ.apply(weight, self.s, self.g, self.Qn, self.Qp, self.per_channel)
             # alpha = grad_scale(self.s, g)
             # w_q = Round.apply((weight/alpha).clamp(Qn, Qp)) * alpha
         return w_q
@@ -504,9 +429,7 @@ class QuantConv2dPlus(nn.Conv2d):
         if self.activation_quantizer.quantize:
             self.active_track.append(self.activation_quantizer.s.cpu().detach().numpy())
             self.weight_track.append(self.weight_quantizer.s.cpu().detach().numpy())
-            self.active_beta_track.append(
-                self.activation_quantizer.beta.cpu().detach().numpy()
-            )
+            self.active_beta_track.append(self.activation_quantizer.beta.cpu().detach().numpy())
             self.iter_track.append(len(self.iter_track))
             # if len(self.iter_track) % 2000 == 500:
             #     self.draw_clip_value()
@@ -523,20 +446,10 @@ class QuantConv2dPlus(nn.Conv2d):
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt/step_size_conv/actScale/{}".format(self.start_time)):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/actScale/{}".format(self.start_time)
-                )
-            )
+            print("Directory {} created".format("plt/step_size_conv/actScale/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/actScale/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/actScale/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/actScale/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/actScale/{}/{}.png".format(self.start_time, len(self.iter_track)))
         plt.close()
 
         plt.figure()
@@ -544,44 +457,20 @@ class QuantConv2dPlus(nn.Conv2d):
         plt.plot(self.iter_track, self.weight_track)
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
-        if not os.path.exists(
-            "plt/step_size_conv/weightScale/{}".format(self.start_time)
-        ):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/weightScale/{}".format(self.start_time)
-                )
-            )
+        if not os.path.exists("plt/step_size_conv/weightScale/{}".format(self.start_time)):
+            print("Directory {} created".format("plt/step_size_conv/weightScale/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/weightScale/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/weightScale/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/weightScale/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/weightScale/{}/{}.png".format(self.start_time, len(self.iter_track)))
         plt.close()
 
         plt.figure()
-        plt.title(
-            "{}\n{}".format(self.active_beta_track[0], self.active_beta_track[-1])
-        )
+        plt.title("{}\n{}".format(self.active_beta_track[0], self.active_beta_track[-1]))
         plt.plot(self.iter_track, self.active_beta_track)
         plt.gca().get_yaxis().get_major_formatter().set_useOffset(False)
 
         if not os.path.exists("plt/step_size_conv/actBeta/{}".format(self.start_time)):
-            print(
-                "Directory {} created".format(
-                    "plt/step_size_conv/actBeta/{}".format(self.start_time)
-                )
-            )
+            print("Directory {} created".format("plt/step_size_conv/actBeta/{}".format(self.start_time)))
 
-        os.makedirs(
-            "plt/step_size_conv/actBeta/{}".format(self.start_time), exist_ok=True
-        )
-        plt.savefig(
-            "plt/step_size_conv/actBeta/{}/{}.png".format(
-                self.start_time, len(self.iter_track)
-            )
-        )
+        os.makedirs("plt/step_size_conv/actBeta/{}".format(self.start_time), exist_ok=True)
+        plt.savefig("plt/step_size_conv/actBeta/{}/{}.png".format(self.start_time, len(self.iter_track)))

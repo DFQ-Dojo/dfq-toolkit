@@ -24,7 +24,9 @@ REPO_ROOT = Path(os.path.relpath(REPO_ROOT, Path.cwd()))
 CONFIG_ENVIRON_KEY = "GENERATION_CONFIG"
 
 CONFIG_FILE: Optional[Path] = (
-    Path(os.environ[CONFIG_ENVIRON_KEY]) if os.environ.get(CONFIG_ENVIRON_KEY) else None
+    Path(os.environ[CONFIG_ENVIRON_KEY])
+    if os.environ.get(CONFIG_ENVIRON_KEY)
+    else None
 )
 
 
@@ -35,9 +37,13 @@ class InputLabelKind(StrEnum):
 
 class RealLabelConfig(BaseModel):
     kind: Literal[InputLabelKind.REAL]
-    data: Path = Field(REPO_ROOT / "coco8.yaml", description="dataset.yaml path")
+    data: Path = Field(
+        REPO_ROOT / "coco8.yaml", description="dataset.yaml path"
+    )
     batch_size: int = Field(16, description="total batch size for all GPUs.")
-    workers: int = Field(8, description="max dataloader workers (per RANK in DDP mode)")
+    workers: int = Field(
+        8, description="max dataloader workers (per RANK in DDP mode)"
+    )
 
 
 class SampledLabelConfig(BaseModel):
@@ -58,9 +64,13 @@ class GHyperparameters(BaseModel):
         0.01, description="coefficient for feature distribution regularization"
     )
 
-    tv_l1: float = Field(0.01, description="coefficient for total variation L1 loss")
+    tv_l1: float = Field(
+        0.01, description="coefficient for total variation L1 loss"
+    )
 
-    tv_l2: float = Field(0.001, description="coefficient for total variation L2 loss")
+    tv_l2: float = Field(
+        0.001, description="coefficient for total variation L2 loss"
+    )
 
     main_loss_multiplier: float = Field(
         1.0, description="coefficient for the main loss in optimization"
@@ -73,7 +83,9 @@ class GHyperparameters(BaseModel):
 
 
 class BoxSamplerConfig(BaseModel):
-    box_sampler: bool = Field(False, description="Enable False positive (Fp) sampling")
+    box_sampler: bool = Field(
+        False, description="Enable False positive (Fp) sampling"
+    )
 
     box_sampler_warmup: int = Field(
         1000,
@@ -81,7 +93,8 @@ class BoxSamplerConfig(BaseModel):
     )
 
     box_sampler_conf: float = Field(
-        0.5, description="confidence threshold for a prediction to become targets"
+        0.5,
+        description="confidence threshold for a prediction to become targets",
     )
 
     box_sampler_overlap_iou: float = Field(
@@ -134,7 +147,9 @@ class GenerationConfig(
     # use "cpu" if you do not have GPUs
     # use "cuda" if you have one GPU
     # use "cuda:x" to choose the (x+1)-th GPU.
-    device: str = Field("cuda", description="cuda device, i.e. 0 or 0,1,2,3 or cpu")
+    device: str = Field(
+        "cuda", description="cuda device, i.e. 0 or 0,1,2,3 or cpu"
+    )
 
     # Teacher is the network where we distill from.
     # For example, if you want to calibrate a YOLO11s model, please set this to "yolo11s.pt"
@@ -168,7 +183,9 @@ class GenerationConfig(
 
     # During the calibration set generation, the optimizer will run on the image for fixed iterations. This option controls that.
     # Generally bigger iteration leds to finer images.
-    iterations: int = Field(100, description="number of iterations for DI optim")
+    iterations: int = Field(
+        100, description="number of iterations for DI optim"
+    )
 
     # hyperparameters such as learning rate and the coefficients of each part of the loss function.
     hyp: GHyperparameters
@@ -191,7 +208,9 @@ class GenerationConfig(
     @classmethod
     def check_save_every(cls, v: int) -> int:
         if v < 1:
-            raise ValueError("<save_every> is not reasonable to take a negative number")
+            raise ValueError(
+                "<save_every> is not reasonable to take a negative number"
+            )
         return v
 
     @classmethod

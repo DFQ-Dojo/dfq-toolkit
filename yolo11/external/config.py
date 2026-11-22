@@ -16,7 +16,9 @@ from quant.kd_mode import KDMethods  # type: ignore
 CONFIG_ENVIRON_KEY = "TRAIN_CONFIG"
 
 CONFIG_FILE: Optional[Path] = (
-    Path(os.environ[CONFIG_ENVIRON_KEY]) if os.environ.get(CONFIG_ENVIRON_KEY) else None
+    Path(os.environ[CONFIG_ENVIRON_KEY])
+    if os.environ.get(CONFIG_ENVIRON_KEY)
+    else None
 )
 
 
@@ -43,14 +45,15 @@ class TrainConfig(
     cli_parse_args=True,
     cli_prog_name="Training Quantized Object Detection Models",
 ):
-
     model_config = SettingsConfigDict(json_file=CONFIG_FILE)
 
     # device for calibration of quantized models.
     device: str | list = Field("cuda", description="device to run this model.")
 
     # CONFIGURATIONS FOR DATASETS
-    dataset_manifest: Path = Field(Path("coco.yaml"), description="dataset.yaml path.")
+    dataset_manifest: Path = Field(
+        Path("coco.yaml"), description="dataset.yaml path."
+    )
 
     # batch size when loading data.
     batch_size: int = Field(32, description="the batch size when loading data.")
@@ -59,7 +62,9 @@ class TrainConfig(
     # the training stage will use fraction * s data to calibrate the network.
     # So if your dataset has 1000 images and you want to use only 200 images,
     # you can set this to 0.2.
-    fraction: float = Field(1.0, description="use how many data to train. 0 - 1")
+    fraction: float = Field(
+        1.0, description="use how many data to train. 0 - 1"
+    )
 
     # If you are using pseudo data to calibrate the model, please set this to the location of your
     # generated path.

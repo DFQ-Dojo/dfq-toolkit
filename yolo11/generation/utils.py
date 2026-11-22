@@ -41,7 +41,9 @@ def clip(image_tensor, use_fp16=False):
         std = np.array([0.229, 0.224, 0.225])
     for c in range(3):
         m, s = mean[c], std[c]
-        image_tensor[:, c] = torch.clamp(image_tensor[:, c], -m / s, (1 - m) / s)
+        image_tensor[:, c] = torch.clamp(
+            image_tensor[:, c], -m / s, (1 - m) / s
+        )
     return image_tensor
 
 

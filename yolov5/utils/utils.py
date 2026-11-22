@@ -1,7 +1,5 @@
 import torch
-import os
-from torch import distributed, nn
-import random
+from torch import nn
 import numpy as np
 from utils.general import (
     xywh2xyxy,
@@ -108,9 +106,7 @@ def random_erase_masks(inputs_shape, return_cuda=True, device=None):
     height = inputs_shape[2]
     width = inputs_shape[3]
     masks = []
-    _rand_erase = torchvision.transforms.RandomErasing(
-        p=0.5, scale=(0.02, 0.2), ratio=(0.3, 3.3), value=0
-    )
+    _rand_erase = torchvision.transforms.RandomErasing(p=0.5, scale=(0.02, 0.2), ratio=(0.3, 3.3), value=0)
     for idx in range(bs):
         mask = torch.ones(3, height, width, dtype=torch.float32)
         mask = _rand_erase(mask)

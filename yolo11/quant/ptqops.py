@@ -10,7 +10,6 @@ import torch.nn as nn
 
 
 class FakeQuantize(Function):
-
     @staticmethod
     def forward(ctx, x, qparam):
         x = qparam.quantize_tensor(x)
@@ -47,7 +46,9 @@ def calcScale(min_val, max_val, num_bits=8):
     return scale
 
 
-def quantize_tensor(x, scale, zero_point, num_bits=8, signed=False, mode="tensor"):
+def quantize_tensor(
+    x, scale, zero_point, num_bits=8, signed=False, mode="tensor"
+):
     if mode == "tensor":
         if signed:
             q_x = x / scale
@@ -82,7 +83,6 @@ def dequantize_tensor(q_x, scale, zero_point, signed=False, mode="tensor"):
 
 
 class QParam(nn.Module):
-
     def __init__(self, num_bits=8, mode="tensor", signed=False):
         super(QParam, self).__init__()
         self.num_bits = num_bits
@@ -108,9 +108,10 @@ class QParam(nn.Module):
             self.min.clamp_(max=0)
 
             if self.signed:
-                self.scale, self.zero_point = calcScale(
-                    self.min, self.max, self.num_bits
-                ), torch.tensor([0]).to(torch.float32).to(self.scale.device)
+                self.scale, self.zero_point = (
+                    calcScale(self.min, self.max, self.num_bits),
+                    torch.tensor([0]).to(torch.float32).to(self.scale.device),
+                )
             else:
                 self.scale, self.zero_point = calcScaleZeroPoint(
                     self.min, self.max, self.num_bits
@@ -133,9 +134,10 @@ class QParam(nn.Module):
 
             assert len(self.max.shape) == 1
 
-            self.scale, self.zero_point = calcScale(
-                self.min, self.max, self.num_bits
-            ), torch.tensor([0]).to(torch.float32).to(self.scale.device)
+            self.scale, self.zero_point = (
+                calcScale(self.min, self.max, self.num_bits),
+                torch.tensor([0]).to(torch.float32).to(self.scale.device),
+            )
 
     def quantize_tensor(self, tensor):
         return quantize_tensor(
