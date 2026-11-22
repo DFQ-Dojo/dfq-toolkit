@@ -77,7 +77,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
 python_version = "3.14"
-files = ["src"]
+files = ["src", "tests"]
 explicit_package_bases = true
 mypy_path = "src"
 exclude = ["src/dfq/vendor/"]
@@ -85,3 +85,9 @@ exclude = ["src/dfq/vendor/"]
 [[tool.mypy.overrides]]
 module = ["torchvision.*", "pycocotools.*", "scipy.*", "cv2.*", "yaml.*", "pandas.*"]
 ignore_missing_imports = true
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+include = ["src", "tests", "scripts"]
+exclude = ["src/dfq/vendor", "resnet", "vit", "yolo11", "yolov5"]
