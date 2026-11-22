@@ -27,3 +27,7 @@ Distill
 download
 *.ipynb
 TODO.md
+
+# uv
+.venv
+outputs

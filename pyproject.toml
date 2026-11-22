@@ -1,0 +1,87 @@
+[project]
+name = "dfq-toolkit"
+version = "0.2.0"
+description = "Task-specific zero-shot quantization-aware training for object detection"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.5",
+    "pillow>=12.0",
+    "pycocotools>=2.0.11",
+    "pydantic>=2.14",
+    "torch>=2.15",
+    "torchvision>=0.29",
+    "tqdm>=4.67",
+]
+
+[project.optional-dependencies]
+# YOLOv5 and YOLO11. Ultralytics and YOLOv5 are vendored under src/dfq/vendor/; these are their
+# third-party needs.
+yolo = [
+    "opencv-python-headless>=4.12",
+    "pandas>=2.3",
+    "pyyaml>=6.0",
+]
+# Swin and DeiT Mask R-CNN, and the PSAQ-ViT baseline. The timm layers they use are vendored.
+vit = [
+    "scipy>=1.18",
+]
+# Pick one wheel source for PyTorch: `uv sync --extra cpu` or `uv sync --extra cu132`.
+cpu = ["torch>=2.15", "torchvision>=0.29"]
+cu132 = ["torch>=2.15", "torchvision>=0.29"]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4",
+    "ruff>=0.17",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "dfq"
+
+[tool.uv]
+conflicts = [[{ extra = "cpu" }, { extra = "cu132" }]]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu132", extra = "cu132" },
+]
+torchvision = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu132", extra = "cu132" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+# The old per-detector projects; each is deleted when its replacement lands in src/dfq.
+extend-exclude = ["resnet", "vit", "yolo11", "yolov5", "src/dfq/vendor"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.14"
+files = ["src"]
+explicit_package_bases = true
+mypy_path = "src"
+exclude = ["src/dfq/vendor/"]
+
+[[tool.mypy.overrides]]
+module = ["torchvision.*", "pycocotools.*", "scipy.*", "cv2.*", "yaml.*", "pandas.*"]
+ignore_missing_imports = true
