@@ -7,6 +7,7 @@ These are runtime values that hold tensors, so they are dataclasses, not Pydanti
 
 from dataclasses import dataclass
 
+import torch
 from torch import Tensor
 
 
@@ -27,3 +28,8 @@ class Detections:
     scores: Tensor
     labels: Tensor
     masks: Tensor | None = None
+
+
+def targets_to(targets: Targets, device: torch.device) -> Targets:
+    masks = targets.masks.to(device) if targets.masks is not None else None
+    return Targets(targets.boxes.to(device), targets.labels.to(device), masks)

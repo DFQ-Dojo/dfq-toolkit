@@ -8,15 +8,18 @@
 Modules are listed from stable to fast-changing. A module imports only modules above it.
 
 ```text
+common/       distributed processes (torchrun), run directories, config files
 quant/        fake quantizers (LSQ, LSQ+), quantized Conv2d and Linear, the quantization scope
   detection/    Targets and Detections, the Detector protocol, training modes, output taps,
                 the COCO classes
     distill/    distillation losses and objective
     synthesis/  image priors, augmentation, adaptive box sampling, the generation loop
+    training/   the quantization-aware training loop, optimizer schedule, weight average
 ```
 
-`distill/` and `synthesis/` depend on the `Detector` protocol, never on a model, and never on
-each other. Each adapter in `models/`
+`distill/`, `synthesis/` and `training/` depend on the `Detector` protocol, never on a model, and
+never on each other. A script connects them: for example, it passes `distill_losses` with a
+student and a teacher to `train` as the objective. Each adapter in `models/`
 implements the protocol.
 
 ## The Detector protocol (`detection/`)
@@ -92,3 +95,24 @@ The module docstring of `synthesis/generate.py` gives the exact objective.
 | `box_sampling` | The adaptive box sampler and its window; `None` keeps the boxes fixed |
 
 The attention-entropy prior reads the modules that `feature_layers("attention")` names.
+
+## Training (`training/`)
+
+`train(network, objective, batches, config, evaluate, run_dir)` trains a network in place and
+returns one `EpochRecord` per epoch. `objective(images, targets)` returns loss terms with their
+sum under `"loss"`: `detection_objective(detector)` for plain training, or `distill_losses` bound
+to a student and a teacher. `evaluate(network)` returns a score where higher is better, such as
+COCO mAP. The loop saves `last.pt` after each epoch and `best.pt` when the score improves.
+
+| Config | Meaning |
+|---|---|
+| `optimizer` | `sgd`, `adam` or `adamw`; learning rate, momentum, weight decay, `no_decay` patterns |
+| `schedule` | Per-epoch factor: `constant`, `linear`, `cosine` (to `final_factor`) or `step` |
+| `warmup` | Linear warm-up iterations, start factor, YOLO's bias learning rate and momentum |
+| `nominal_batch_size` | Accumulate gradients until this many images, as YOLO does |
+| `grad_clip`, `amp`, `ema` | Gradient-norm clipping, mixed precision, the weight average |
+| `patience` | Stop after this many epochs without a better score |
+| `process_reduction` | Combine the gradients of `torchrun` processes by `mean` or `sum` |
+
+Under `torchrun`, `common/distributed.py` averages gradients after each backward pass; no
+`DistributedDataParallel` wrapper hides the network from the taps.
