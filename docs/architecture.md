@@ -9,11 +9,14 @@ Modules are listed from stable to fast-changing. A module imports only modules a
 
 ```text
 quant/        fake quantizers (LSQ, LSQ+), quantized Conv2d and Linear, the quantization scope
-  detection/  Targets and Detections, the Detector protocol, training modes, the COCO classes
-    distill/  distillation losses, output taps, the distillation objective
+  detection/    Targets and Detections, the Detector protocol, training modes, output taps,
+                the COCO classes
+    distill/    distillation losses and objective
+    synthesis/  image priors, augmentation, adaptive box sampling, the generation loop
 ```
 
-`distill/` depends on the `Detector` protocol, never on a model. Each adapter in `models/`
+`distill/` and `synthesis/` depend on the `Detector` protocol, never on a model, and never on
+each other. Each adapter in `models/`
 implements the protocol.
 
 ## The Detector protocol (`detection/`)
@@ -35,6 +38,7 @@ ids.
 
 `generation_mode(network)` puts a network in training mode with its normalization statistics
 frozen, which image generation needs. `freeze(network)` stops gradients to its parameters.
+`tap(network, names)` records module outputs; its hooks exist only inside its `with` block.
 
 ## Quantization (`quant/`)
 
@@ -69,5 +73,22 @@ their sum, `loss`:
   (`all_outputs`).
 - `feature`: the mean squared difference between the outputs of `feature_layers(kind)`.
 
-The teacher runs `predict` in evaluation mode without gradients. `tap(network, names)` records
-module outputs; its hooks exist only inside its `with` block.
+The teacher runs `predict` in evaluation mode without gradients.
+
+## Synthesis (`synthesis/`)
+
+`generate_batch(teacher, targets, size, config, verifier)` optimizes a batch of images for given
+boxes and returns the images (pixels in `[0, 1]`), the final boxes, and one `StepRecord` per step.
+The module docstring of `synthesis/generate.py` gives the exact objective.
+
+| Config | Meaning |
+|---|---|
+| `latent` | Mean and standard deviation that map the optimized tensor to pixels |
+| `init` | `uniform_pixels`, `normal_pixels` or `normal_latent` |
+| `schedule`, `warmup` | `cosine` from the first step, or `warmup_cosine` after `warmup` steps |
+| `weights` | Detection loss, TV L1 and L2, batch-norm statistics, first batch norm, attention entropy |
+| `augment` | Jitter, flip, brightness, contrast, random erasing |
+| `verify_every` | How often the verifier scores the images; the best-scoring images are kept |
+| `box_sampling` | The adaptive box sampler and its window; `None` keeps the boxes fixed |
+
+The attention-entropy prior reads the modules that `feature_layers("attention")` names.

@@ -19,8 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from torch import Tensor
 
 from dfq.detection import Detector, Targets
+from dfq.detection.taps import tap
 from dfq.distill.losses import SoftmaxOver, dist_loss, feature_mse, kl_divergence
-from dfq.distill.taps import tap
 
 
 class KLConfig(BaseModel):

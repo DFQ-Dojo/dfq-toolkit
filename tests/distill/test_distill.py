@@ -3,9 +3,9 @@ import unittest
 
 import torch
 
+from dfq.detection.taps import tap
 from dfq.distill import DISTConfig, DistillConfig, KLConfig, distill_losses
 from dfq.distill.losses import SoftmaxOver, kl_divergence
-from dfq.distill.taps import tap
 from dfq.quant import Method, QuantConfig, quantize
 from tests.toy import ToyDetector, toy_batch
 
