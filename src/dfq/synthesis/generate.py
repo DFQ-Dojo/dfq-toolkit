@@ -38,9 +38,15 @@ class Init(StrEnum):
 
 
 class Schedule(StrEnum):
-    """`cosine` decays from the first step; `warmup_cosine` first rises linearly."""
+    """Cosine decay to zero over the run.
+
+    `cosine` is already decayed by one step at the first step (the scheduler stepped before the
+    optimizer, as in YOLOv5 and ResNet); `cosine_after_step` starts at the full rate (YOLO11);
+    `warmup_cosine` first rises linearly over `warmup` steps (Swin, DeiT).
+    """
 
     COSINE = "cosine"
+    COSINE_AFTER_STEP = "cosine_after_step"
     WARMUP_COSINE = "warmup_cosine"
 
 
@@ -103,6 +109,8 @@ def learning_rate(config: GenerationConfig, iteration: int) -> float:
     if config.schedule is Schedule.COSINE:
         return 0.5 * config.lr * (1 + math.cos(math.pi * iteration / config.iterations))
     step = iteration - 1
+    if config.schedule is Schedule.COSINE_AFTER_STEP:
+        return 0.5 * config.lr * (1 + math.cos(math.pi * step / config.iterations))
     if step < config.warmup:
         return config.lr * (step + 1) / config.warmup
     progress = (step - config.warmup) / (config.iterations - config.warmup)

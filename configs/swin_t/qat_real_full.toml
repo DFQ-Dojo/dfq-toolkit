@@ -1,0 +1,34 @@
+# Baseline: 8-bit LSQ on the full COCO train2017, without distillation (the old
+# scripts/stage_two/exact_full/exactfull_t_8.sh). Augmentation: flip and a random shorter side from 480
+# to 800; the old pipeline also had a random-crop policy, which dfq does not implement.
+output = "outputs/swin_t/qat_real_full"
+batch_size = 1
+
+[model]
+family = "swin_t"
+weights = "weights/mask_rcnn_swin-t-p4-w7_fpn_fp16_ms-crop-3x_coco_20210908_165006-90a4008c.pth"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "coco"
+images = "data/coco/train2017"
+annotations = "data/coco/annotations/instances_train2017.json"
+
+[resize]
+short_sides = [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
+long_side = 1333
+flip = 0.5
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[train]
+epochs = 15
+amp = true
+optimizer = { name = "adamw", lr = 1e-6, momentum = 0.9, weight_decay = 0.05, no_decay = ["*absolute_pos_embed", "*relative_position_bias_table"] }
+warmup = { iterations = 1000, start_factor = 0.001 }

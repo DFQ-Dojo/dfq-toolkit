@@ -1,0 +1,22 @@
+# Stage I, step 1 for YOLO11s: generate 160 x 160 images from one random box each, with adaptive
+# box sampling (the old yolo11/generation/config/genlabel.json). Its labels.jsonl starts step 2.
+labels = "outputs/labels/one_box.jsonl"
+output = "outputs/yolo11s/one_box"
+size = [160, 160]
+batch_size = 512
+count = 2048
+verify = true
+
+[model]
+family = "yolo11s"
+weights = "weights/yolo11s.pt"
+
+[generation]
+iterations = 3000
+lr = 0.2
+schedule = "cosine_after_step"
+init = "uniform_pixels"
+clamp = false
+verify_every = 100
+weights = { detection = 0.5, tv_l1 = 0.0, tv_l2 = 0.002, batch_norm = 0.05, first_batch_norm = 5.0 }
+box_sampling = { start = 800, stop = 2800, confidence = 0.2, overlap_iou = 0.35, min_area = 0.01, max_area = 0.85 }

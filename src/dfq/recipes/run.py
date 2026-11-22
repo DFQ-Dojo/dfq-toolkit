@@ -7,6 +7,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
+from dfq.baselines.psaq import dummy_targets, generate_psaq_batch, load_classifier
 from dfq.common import distributed
 from dfq.common.runs import seed_everything, start_run, write_json, write_records
 from dfq.data.coco_eval import evaluate_coco
@@ -14,9 +15,15 @@ from dfq.data.labels import coco_labels, one_box_labels, read_label_set, to_targ
 from dfq.data.synthetic import append_batch, read_manifest, start_set
 from dfq.detection import Detector, targets_to
 from dfq.distill import distill_losses
-from dfq.recipes.configs import EvaluateConfig, GenerateConfig, LabelsConfig, QatConfig
-from dfq.recipes.families import float_detector, quantized_detector
-from dfq.recipes.maskrcnn_data import train_batches, validation_batches
+from dfq.recipes.configs import (
+    EvaluateConfig,
+    GenerateConfig,
+    LabelsConfig,
+    PsaqConfig,
+    QatConfig,
+)
+from dfq.recipes.data import train_batches, validation_batches
+from dfq.recipes.families import float_detector, is_yolo, quantized_detector
 from dfq.synthesis import generate_batch
 from dfq.training import detection_objective, train
 
@@ -54,6 +61,24 @@ def generate(config: GenerateConfig) -> int:
     return sum(read_manifest(config.output).counts)
 
 
+def psaq(config: PsaqConfig) -> int:
+    """Generate the PSAQ-ViT baseline's images; return how many the output holds."""
+    device = torch.device(config.device)
+    seed_everything(config.seed)
+    start_run(config.output, config)
+    if not (config.output / "manifest.json").exists():
+        start_set(config.output, 640, 640)
+    classifier = load_classifier(config.weights, config.load_final_norm).to(device).eval()
+    for parameter in classifier.parameters():
+        parameter.requires_grad_(False)
+    done = sum(read_manifest(config.output).counts)
+    for start in range(done, config.count, config.batch_size):
+        size = min(config.batch_size, config.count - start)
+        images = generate_psaq_batch(classifier, size, config.steps, device)
+        append_batch(config.output, images, dummy_targets(size))
+    return sum(read_manifest(config.output).counts)
+
+
 def with_network(detector: Detector, network: nn.Module) -> Detector:
     """The same adapter around another copy of its network, such as the weight average."""
     copied: Detector = replace(detector, network=network)  # type: ignore[type-var]
@@ -71,8 +96,9 @@ def qat(config: QatConfig) -> dict[str, float]:
     if config.distill is not None:
         teacher = float_detector(config.model, device)
         objective = functools.partial(distill_losses, student, teacher, config=config.distill)
-    batches = train_batches(config.data, config.resize, config.batch_size, config.workers)
-    validation, samples = validation_batches(config.validation, 1, config.workers)
+    yolo = is_yolo(config.model.family)
+    batches = train_batches(config.data, config.resize, yolo, config.batch_size, config.workers)
+    validation, samples = validation_batches(config.validation, yolo, 1, config.workers)
 
     def score(network: nn.Module) -> float:
         stats = evaluate_coco(
@@ -94,8 +120,11 @@ def evaluate(config: EvaluateConfig, output: Path | None) -> dict[str, float]:
         detector = float_detector(config.model, device)
     else:
         detector = quantized_detector(config.model, config.quant, config.checkpoint, device)
-    batches, samples = validation_batches(config.validation, config.batch_size, config.workers)
-    stats = evaluate_coco(detector, batches, samples.coco, with_masks=True)
+    yolo = is_yolo(config.model.family)
+    batches, samples = validation_batches(
+        config.validation, yolo, config.batch_size, config.workers
+    )
+    stats = evaluate_coco(detector, batches, samples.coco, with_masks=not yolo)
     if output is not None and distributed.is_main():
         write_json(output, stats)
     return stats

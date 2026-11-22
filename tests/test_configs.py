@@ -6,7 +6,13 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from dfq.common.config import load_config
-from dfq.recipes.configs import EvaluateConfig, GenerateConfig, LabelsConfig, QatConfig
+from dfq.recipes.configs import (
+    EvaluateConfig,
+    GenerateConfig,
+    LabelsConfig,
+    PsaqConfig,
+    QatConfig,
+)
 
 CONFIGS = Path(__file__).resolve().parent.parent / "configs"
 
@@ -14,6 +20,8 @@ CONFIGS = Path(__file__).resolve().parent.parent / "configs"
 def record_type(path: Path) -> type[BaseModel]:
     if path.parent.name == "labels":
         return LabelsConfig
+    if path.stem == "psaq":
+        return PsaqConfig
     prefixes: dict[str, type[BaseModel]] = {
         "generate": GenerateConfig,
         "qat": QatConfig,

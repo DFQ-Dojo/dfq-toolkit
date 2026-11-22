@@ -5,8 +5,8 @@ whose name matches a `no_decay` pattern, without decay; and biases, without deca
 `decay_biases_and_norms`, biases and normalization weights decay too, as plain SGD does. YOLO
 warms the bias group up from a high learning rate, so the bias group comes first.
 
-The learning rate of iteration `i` in epoch `e` is `lr * epoch_factor(e)`. During the first
-`warmup.iterations` iterations it rises linearly from `start_factor * lr` (or from `bias_start_lr`
+The learning rate of iteration `i` in epoch `e` is `lr * epoch_factor(e)`. During the warm-up
+iterations it rises linearly from `start_factor * lr` (or from `bias_start_lr`
 for biases) to that value, and the momentum rises from `start_momentum` to `momentum`.
 """
 
@@ -58,9 +58,12 @@ class ScheduleConfig(BaseModel):
 
 
 class WarmupConfig(BaseModel):
+    """Warm up for `max(iterations, epochs x batches per epoch)` iterations."""
+
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     iterations: int = 0
+    epochs: float = 0.0
     start_factor: float = 0.0
     bias_start_lr: float | None = None
     start_momentum: float | None = None

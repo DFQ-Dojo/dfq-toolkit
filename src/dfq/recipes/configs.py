@@ -14,6 +14,15 @@ from dfq.training import TrainConfig
 
 class Family(StrEnum):
     RESNET50 = "resnet50"
+    SWIN_T = "swin_t"
+    SWIN_S = "swin_s"
+    DEIT_T = "deit_t"
+    DEIT_S = "deit_s"
+    YOLO11N = "yolo11n"
+    YOLO11S = "yolo11s"
+    YOLO11M = "yolo11m"
+    YOLO11L = "yolo11l"
+    YOLO11X = "yolo11x"
 
 
 class Record(BaseModel):
@@ -43,10 +52,12 @@ class SyntheticData(Record):
 
 
 class ResizeConfig(Record):
-    """Mask R-CNN resizing: a random shorter side from `short_sides`, at most `long_side`."""
+    """Resizing of real images. Mask R-CNN: a random shorter side from `short_sides`, at most
+    `long_side`. YOLO: a letterbox of `image_size`. Both flip with probability `flip`."""
 
     short_sides: tuple[int, ...] = (800,)
     long_side: int = 1333
+    image_size: int = 640
     flip: float = 0.0
 
 
@@ -78,6 +89,19 @@ class GenerateConfig(Record):
     device: str = "cuda"
     verify: bool = True
     generation: GenerationConfig
+
+
+class PsaqConfig(Record):
+    """The PSAQ-ViT baseline's image generation; see `dfq.baselines.psaq`."""
+
+    weights: Path
+    output: Path
+    count: int
+    batch_size: int
+    steps: int = 500
+    load_final_norm: bool = False
+    seed: int = 0
+    device: str = "cuda"
 
 
 class QatConfig(Record):

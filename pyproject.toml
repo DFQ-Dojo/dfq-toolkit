@@ -69,8 +69,8 @@ explicit = true
 
 [tool.ruff]
 line-length = 100
-# The old per-detector projects; each is deleted when its replacement lands in src/dfq.
-extend-exclude = ["yolo11", "yolov5"]
+# The old YOLOv5 project, deleted when its replacement lands in src/dfq.
+extend-exclude = ["yolov5"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -89,4 +89,4 @@ ignore_missing_imports = true
 venvPath = "."
 venv = ".venv"
 include = ["src", "tests", "scripts"]
-exclude = ["yolo11", "yolov5"]
+exclude = ["yolov5"]

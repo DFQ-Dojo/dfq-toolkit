@@ -1,0 +1,35 @@
+# Stage II for Swin-T Mask R-CNN: 8-bit LSQ on generated images, with distillation
+# (the old scripts/stage_two/ours/ours_t_8.sh: block MSE, RPN KL, all weights 1, lr 1e-5,
+# 15 epochs, one image per GPU on 8 GPUs, fp16).
+output = "outputs/swin_t/qat_ours"
+batch_size = 1
+
+[model]
+family = "swin_t"
+weights = "weights/mask_rcnn_swin-t-p4-w7_fpn_fp16_ms-crop-3x_coco_20210908_165006-90a4008c.pth"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "synthetic"
+directories = ["outputs/swin_t/generated"]
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[distill]
+detection_weight = 1.0
+logit_weight = 1.0
+feature_weight = 1.0
+feature_kind = "block"
+logit_loss = { kind = "kl", tau = 1.0, softmax_over = "all_outputs" }
+
+[train]
+epochs = 15
+amp = true
+optimizer = { name = "adamw", lr = 1e-5, momentum = 0.9, weight_decay = 0.05, no_decay = ["*absolute_pos_embed", "*relative_position_bias_table"] }
+warmup = { iterations = 1000, start_factor = 0.001 }

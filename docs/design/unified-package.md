@@ -103,3 +103,6 @@ about 1000 changed lines, not counting moved files.
 - The unified training loop replaces the Ultralytics and MMDetection trainers. It reproduces their
   warm-up, schedule, EMA and mixed precision from config, but the paper's numbers must be reproduced
   again before they are claimed for the new code.
+- The YOLO real-data baselines (2% and full COCO) letterbox and flip only. The old Ultralytics
+  trainer also used mosaic, perspective and colour augmentation; until those are vendored, those
+  baselines are not comparable with the paper's.

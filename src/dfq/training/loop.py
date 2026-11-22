@@ -9,7 +9,7 @@ training stops once the score has not improved for `patience` epochs.
 """
 
 import math
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence, Sized
 from enum import StrEnum
 from pathlib import Path
 
@@ -126,6 +126,10 @@ def train(
     run_dir: Path,
 ) -> list[EpochRecord]:
     """Train `network` in place; return one record per epoch. `batches` is iterated per epoch."""
+    per_epoch = len(batches) if isinstance(batches, Sized) else 0
+    warmup_iterations = max(config.warmup.iterations, round(config.warmup.epochs * per_epoch))
+    warmup = config.warmup.model_copy(update={"iterations": warmup_iterations})
+    config = config.model_copy(update={"warmup": warmup})
     device = next(network.parameters()).device
     optimizer = build_optimizer(network, config.optimizer)
     scaler = torch.amp.GradScaler(device.type, enabled=config.amp)

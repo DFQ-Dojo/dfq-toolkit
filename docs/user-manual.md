@@ -37,6 +37,21 @@ weights/                        pretrained detectors (below)
 | Family | Weights file | Source |
 |---|---|---|
 | `resnet50` | `weights/maskrcnn_resnet50_fpn_coco.pth` | [torchvision](https://download.pytorch.org/models/maskrcnn_resnet50_fpn_coco-bf2d0c1e.pth) |
+| `swin_t` | `weights/mask_rcnn_swin-t-p4-w7_fpn_fp16_ms-crop-3x_coco_20210908_165006-90a4008c.pth` | [MMDetection](https://download.openmmlab.com/mmdetection/v2.0/swin/mask_rcnn_swin-t-p4-w7_fpn_fp16_ms-crop-3x_coco/mask_rcnn_swin-t-p4-w7_fpn_fp16_ms-crop-3x_coco_20210908_165006-90a4008c.pth) |
+| `swin_s` | `weights/mask_rcnn_swin-s-p4-w7_fpn_fp16_ms-crop-3x_coco_20210903_104808-b92c91f1.pth` | [MMDetection](https://download.openmmlab.com/mmdetection/v2.0/swin/mask_rcnn_swin-s-p4-w7_fpn_fp16_ms-crop-3x_coco/mask_rcnn_swin-s-p4-w7_fpn_fp16_ms-crop-3x_coco_20210903_104808-b92c91f1.pth) |
+| `deit_t` | `weights/mask_rcnn_deit_tiny_fpn_3x_coco.pth.tar` | [ViT-Adapter](https://github.com/czczup/ViT-Adapter/releases/download/v0.3.1/mask_rcnn_deit_tiny_fpn_3x_coco.pth.tar) |
+| `deit_s` | `weights/mask_rcnn_deit_small_fpn_3x_coco.pth.tar` | [ViT-Adapter](https://github.com/czczup/ViT-Adapter/releases/download/v0.3.1/mask_rcnn_deit_small_fpn_3x_coco.pth.tar) |
+| PSAQ classifier | `weights/swin_tiny_patch4_window7_224.pth` | [Swin release](https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_tiny_patch4_window7_224.pth) |
+
+| `yolo11n` to `yolo11x` | `weights/yolo11s.pt` (converted, below) | [Ultralytics](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt) |
+
+MMDetection-format checkpoints load directly; the converter renames their keys on loading.
+
+Ultralytics checkpoints pickle whole modules. Convert each once into a plain state dict:
+
+```bash
+uv run --no-sync python scripts/convert_checkpoint.py yolo11s.pt weights/yolo11s.pt
+```
 
 ## How the scripts work
 
@@ -71,6 +86,16 @@ It writes a JSON Lines file of `ImageLabels` records, one per image, with boxes 
 uv run --no-sync python scripts/generate.py configs/resnet50/generate.toml
 ```
 
+| Config | Generation |
+|---|---|
+| `configs/resnet50/generate.toml` | Real labels; detection loss, batch-norm prior, TV |
+| `configs/swin_t/generate.toml`, `configs/swin_s/generate.toml` | Real labels; detection loss, attention entropy, TV |
+| `configs/yolo11s/generate_one_box.toml` | One random box per image at 160 x 160, with adaptive box sampling |
+| `configs/yolo11s/generate.toml` | The boxes that `generate_one_box` ended with, at 640 x 640 |
+
+The YOLO method runs Stage I in two steps: `labels.py configs/labels/one_box.toml`, then
+`generate_one_box.toml`, whose `labels.jsonl` feeds `generate.toml`.
+
 It generates `count` images of `size` from the label set, `batch_size` at a time, and writes a
 synthetic set to `output`:
 
@@ -93,6 +118,18 @@ done
 
 Stage II then lists all parts in `data.directories`.
 
+## `scripts/psaq.py`: the PSAQ-ViT baseline
+
+```bash
+uv run --no-sync python scripts/psaq.py configs/baselines/psaq.toml
+uv run --no-sync python scripts/qat.py configs/swin_t/qat_ours.toml \
+  data.directories=[\"outputs/baselines/psaq\"] output=\"outputs/swin_t/qat_psaq\"
+```
+
+It writes a synthetic set of 640 x 640 images with one dummy box each, which Stage II trains on
+like generated images. `load_final_norm = true` loads the classifier's final norm, which the
+paper's baseline lacked ([details](research/transformer-adapter-checks.md)).
+
 ## `scripts/qat.py`: Stage II
 
 ```bash
@@ -104,6 +141,18 @@ uv run --no-sync torchrun --nproc-per-node 8 scripts/qat.py configs/resnet50/qat
 |---|---|
 | `configs/resnet50/qat_ours.toml` | 8-bit LSQ on generated images, with distillation (the method) |
 | `configs/resnet50/qat_real.toml` | 8-bit LSQ on COCO train2017, without distillation (baseline) |
+| `configs/swin_t/qat_ours.toml`, `configs/swin_s/qat_ours.toml` | The method on Swin-T and Swin-S |
+| `configs/swin_*/qat_real_2k.toml` | Baseline: the first 2048 COCO train2017 images |
+| `configs/swin_*/qat_real_full.toml`, `configs/deit_t/qat_real_full.toml` | Baseline: all of COCO train2017 |
+
+| `configs/yolo11s/qat_ours.toml` | The method on YOLO11s |
+| `configs/yolo11s/qat_real_2k.toml`, `qat_real_full.toml` | Baselines: 2% and all of COCO train2017 |
+
+The YOLO real-data baselines letterbox and flip; the old Ultralytics trainer also used mosaic,
+perspective and colour augmentation, which dfq does not implement yet.
+
+For DeiT-S or another variant, override the family and weights:
+`model.family="deit_s" model.weights="weights/mask_rcnn_deit_small_fpn_3x_coco.pth.tar"`.
 
 Set `quant.method` to `lsq` or `lsq+`, and `quant.weight_bits` and `quant.activation_bits`. After
 each epoch the run scores COCO box mAP on `validation` and writes to `output`:

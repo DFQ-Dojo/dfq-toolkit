@@ -1,0 +1,25 @@
+# Stage I for Swin-T Mask R-CNN: generate images from real COCO labels, with the patch-similarity
+# entropy prior (the old vit/tools/generation.py with tools/config/generation.json and
+# scripts/stage_one/gen_t.sh). The old code kept the boxes in original-image pixels on a 640 x 640
+# canvas; dfq scales the normalized boxes to the canvas.
+labels = "outputs/labels/coco_train.jsonl"
+output = "outputs/swin_t/generated"
+size = [640, 640]
+batch_size = 12
+count = 2048
+verify = false
+
+[model]
+family = "swin_t"
+weights = "weights/mask_rcnn_swin-t-p4-w7_fpn_fp16_ms-crop-3x_coco_20210908_165006-90a4008c.pth"
+
+[generation]
+iterations = 2000
+lr = 0.2
+betas = [0.5, 0.9]
+schedule = "warmup_cosine"
+warmup = 100
+init = "normal_latent"
+clamp = false
+latent = { mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225] }
+weights = { detection = 10.0, tv_l2 = 0.001, attention_entropy = 1.0 }

@@ -1,0 +1,10 @@
+# COCO val2017 box and mask mAP of the float model; set quant and checkpoint for a QAT result.
+batch_size = 1
+
+[model]
+family = "deit_t"
+weights = "weights/mask_rcnn_deit_tiny_fpn_3x_coco.pth.tar"
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"

@@ -1,0 +1,34 @@
+# Baseline: 8-bit LSQ on the full COCO train2017, without distillation (the old
+# tools/config/qat_full_deit.json). Augmentation: flip and a random shorter side from 480
+# to 800; the old pipeline also had a random-crop policy, which dfq does not implement.
+output = "outputs/deit_t/qat_real_full"
+batch_size = 1
+
+[model]
+family = "deit_t"
+weights = "weights/mask_rcnn_deit_tiny_fpn_3x_coco.pth.tar"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "coco"
+images = "data/coco/train2017"
+annotations = "data/coco/annotations/instances_train2017.json"
+
+[resize]
+short_sides = [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
+long_side = 1333
+flip = 0.5
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[train]
+epochs = 15
+amp = true
+optimizer = { name = "adamw", lr = 1e-5, momentum = 0.9, weight_decay = 0.05, no_decay = ["*pos_embed"] }
+warmup = { iterations = 1000, start_factor = 0.001 }

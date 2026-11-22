@@ -1,0 +1,10 @@
+# COCO val2017 box mAP of the float model; set quant and checkpoint for a QAT result.
+batch_size = 1
+
+[model]
+family = "yolo11s"
+weights = "weights/yolo11s.pt"
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
