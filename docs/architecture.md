@@ -12,6 +12,7 @@ common/       distributed processes (torchrun), run directories, config files
 quant/        fake quantizers (LSQ, LSQ+), quantized Conv2d and Linear, the quantization scope
   detection/    Targets and Detections, the Detector protocol, training modes, output taps,
                 the COCO classes
+    data/       label sets, COCO instances, synthetic image sets, COCO evaluation
     distill/    distillation losses and objective
     synthesis/  image priors, augmentation, adaptive box sampling, the generation loop
     training/   the quantization-aware training loop, optimizer schedule, weight average
@@ -116,3 +117,38 @@ COCO mAP. The loop saves `last.pt` after each epoch and `best.pt` when the score
 
 Under `torchrun`, `common/distributed.py` averages gradients after each backward pass; no
 `DistributedDataParallel` wrapper hides the network from the taps.
+
+## Data (`data/`)
+
+**Label sets** (`labels.py`) are the boxes that image generation starts from: JSON Lines of
+`ImageLabels` records, with boxes normalized to `[0, 1]`. `one_box_labels` samples one random box
+per image (the same draws as the old `generate_one_label.py`), `coco_labels` reads the boxes of a
+COCO annotation file, and `from_targets` keeps the boxes a generation run ended with.
+
+**Synthetic sets** (`synthetic.py`) are directories that image generation writes and
+distillation reads:
+
+```text
+manifest.json     SyntheticManifest: image size, batch files, images per batch
+batch_00000.pt    {"images": float [B, 3, H, W] in [0, 1], "boxes": [...], "labels": [...]}
+labels.jsonl      the final boxes as a label set, to start another generation from
+```
+
+`SyntheticImages` reads them one batch file at a time.
+
+**COCO instances** (`coco.py`) load images, boxes and masks for Mask R-CNN.
+`resize_keep_ratio` fits an image into `short x long`, as MMDetection's `Resize` does, and
+`pad_batch` pads with a fill colour; the network's pixel mean makes padding normalize to zero.
+YOLO's COCO pipeline belongs to the YOLO adapters, because its augmentation is model-specific.
+
+**Evaluation** (`coco_eval.py`): `evaluate_coco(detector, batches, coco, with_masks)` maps
+detections back to the original images and returns pycocotools' box (and mask) mAP statistics,
+gathered over `torchrun` processes.
+
+## Common (`common/`)
+
+- `config.py`: `load_config(path, model, overrides)` reads a TOML file into a Pydantic record.
+  An override is `dotted.key=value` with a TOML value, such as `train.epochs=3`.
+- `runs.py`: `start_run` creates a run directory and saves the resolved config as `config.json`;
+  `write_records` appends records to a JSON Lines file.
+- `distributed.py`: joining a `torchrun` process group, averaging gradients.
