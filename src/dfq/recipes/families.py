@@ -8,6 +8,7 @@ from dfq.detection import Detector
 from dfq.models.maskrcnn.resnet import load_resnet50
 from dfq.models.maskrcnn.transformer_rcnn import load_transformer
 from dfq.models.yolo.yolo11 import load_yolo11
+from dfq.models.yolo.yolov5 import load_yolov5
 from dfq.quant import QuantConfig, quantize
 from dfq.recipes.configs import Family, ModelConfig
 
@@ -19,6 +20,8 @@ def is_yolo(family: Family) -> bool:
 def float_detector(config: ModelConfig, device: torch.device) -> Detector:
     if config.family is Family.RESNET50:
         detector: Detector = load_resnet50(config.weights)
+    elif config.family.value.startswith("yolov5"):
+        detector = load_yolov5(config.weights, config.image_size)
     elif is_yolo(config.family):
         detector = load_yolo11(config.weights)
     else:

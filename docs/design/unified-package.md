@@ -29,8 +29,8 @@ One installable package, `dfq`, under `src/dfq/`, with one `pyproject.toml`, man
   own copy of the distillation hooks.
 - **Decision:** quantization is one policy applied to a built model by swapping modules. **Rejected:**
   model definitions that carry bit widths, such as the per-bit YAML files.
-- **Decision:** depend only on stable, widely used packages: PyTorch, torchvision, NumPy, pandas,
-  Pillow, OpenCV, PyYAML, SciPy, Pydantic, pycocotools and tqdm. **Rejected:** depending on
+- **Decision:** depend only on stable, widely used packages: PyTorch, torchvision, NumPy, Pillow,
+  PyYAML, Pydantic and pycocotools. **Rejected:** depending on
   Ultralytics and timm, whose future and interfaces we cannot rely on.
 - **Decision:** vendor the parts of Ultralytics (8.3.53, the version the YOLO11 results used),
   YOLOv5 and timm that the pipeline imports, under `dfq/vendor/`, each with its licence and source
@@ -82,7 +82,7 @@ know which family they run.
 
 ## Migration
 
-Each detector family moves in its own commits: adapter, configs, scripts and tests first, then the
+All six steps are done (2026-11-22). Each detector family moved in its own commits: adapter, configs, scripts and tests first, then the
 old directory is deleted in the commit that replaces its last entry point. Each commit stays under
 about 1000 changed lines, not counting moved files.
 

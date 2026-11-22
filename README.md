@@ -46,15 +46,14 @@ All detectors share one Python package, `dfq`, on Python 3.14, managed by [uv](h
 | `docs/` | [User manual](docs/user-manual.md), [architecture](docs/architecture.md), designs, results |
 | `tests/` | Unit tests that run on CPU |
 | `tools/` | Dataset download |
-| `yolov5/` | The old YOLOv5 project, until it moves into `dfq` |
 
-ResNet-50, Swin and DeiT Mask R-CNN and YOLO11 already run on `dfq`, without MMDetection and without installing Ultralytics. The move is described in
+All four detector families run on `dfq`, without MMDetection, Ultralytics or timm installed. The move is described in
 [`docs/design/unified-package.md`](docs/design/unified-package.md).
 
 To start, follow the [user manual](docs/user-manual.md):
 
 ```bash
-uv sync --extra cu132 --extra vit --extra yolo
+uv sync --extra cu132
 uv run --no-sync python scripts/generate.py configs/resnet50/generate.toml
 ```
 

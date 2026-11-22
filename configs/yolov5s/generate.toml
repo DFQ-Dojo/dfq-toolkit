@@ -1,0 +1,23 @@
+# Stage I, step 2 for YOLOv5s: generate the 640 x 640 calibration images from the boxes that step 1
+# ended with, without box sampling (the old distill_image.py at 640 with real-label settings).
+labels = "outputs/yolov5s/one_box/labels.jsonl"
+output = "outputs/yolov5s/generated"
+size = [640, 640]
+batch_size = 32
+count = 2048
+verify = true
+
+[model]
+family = "yolov5s"
+weights = "weights/yolov5s.pt"
+image_size = 640
+
+[generation]
+iterations = 2500
+lr = 0.2
+schedule = "cosine"
+init = "uniform_pixels"
+clamp = true
+verify_every = 50
+augment = { erase = true }
+weights = { detection = 0.5, tv_l1 = 0.0, tv_l2 = 0.0005, batch_norm = 0.01, first_batch_norm = 2.0 }

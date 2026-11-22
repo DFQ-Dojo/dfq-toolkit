@@ -1,0 +1,43 @@
+# Stage II for YOLOv5s: 8-bit LSQ on generated images, with distillation (the old
+# yolov5/README.md datafree_qat_ckpt command with data/hyps/hyps.qat.yaml, and YOLOv5's training
+# loop: warm-up over max(3 epochs, 100) iterations, nominal batch 64, gradient clipping at 10,
+# EMA, AMP).
+# Set quant.weight_bits and quant.activation_bits for W4A4 and W4A8.
+output = "outputs/yolov5s/qat_ours"
+batch_size = 32
+
+[model]
+family = "yolov5s"
+weights = "weights/yolov5s.pt"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "synthetic"
+directories = ["outputs/yolov5s/generated"]
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[distill]
+detection_weight = 0.04
+logit_weight = 0.1
+feature_weight = 1.0
+feature_kind = "cnnbn"
+logit_loss = { kind = "kl", tau = 4.0, softmax_over = "each_output" }
+
+[train]
+epochs = 100
+patience = 10
+amp = true
+nominal_batch_size = 64
+grad_clip = 10.0
+process_reduction = "sum"
+ema = { decay = 0.9999, tau = 2000.0 }
+optimizer = { name = "adam", lr = 1e-4, momentum = 0.9, weight_decay = 0.0005 }
+schedule = { kind = "linear", final_factor = 0.01 }
+warmup = { epochs = 3.0, iterations = 100, start_factor = 0.0, bias_start_lr = 0.1, start_momentum = 0.8 }

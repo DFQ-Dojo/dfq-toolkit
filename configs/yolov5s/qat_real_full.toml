@@ -1,0 +1,41 @@
+# Baseline for YOLOv5s: 8-bit LSQ on all of COCO train2017, without distillation
+# (the old yolov5/README.md qat command with data/hyps/hyps.qat.yaml). Augmentation is a letterbox
+# and flips only; YOLOv5 also used mosaic, perspective and colour changes, which dfq does not
+# implement.
+# Set quant.weight_bits and quant.activation_bits for W4A4 and W4A8.
+output = "outputs/yolov5s/qat_real_full"
+batch_size = 16
+
+[model]
+family = "yolov5s"
+weights = "weights/yolov5s.pt"
+
+[quant]
+method = "lsq"
+weight_bits = 8
+activation_bits = 8
+
+[data]
+kind = "coco"
+images = "data/coco/train2017"
+annotations = "data/coco/annotations/instances_train2017.json"
+
+[resize]
+image_size = 640
+flip = 0.5
+
+[validation]
+images = "data/coco/val2017"
+annotations = "data/coco/annotations/instances_val2017.json"
+
+[train]
+epochs = 100
+patience = 5
+amp = true
+nominal_batch_size = 64
+grad_clip = 10.0
+process_reduction = "sum"
+ema = { decay = 0.9999, tau = 2000.0 }
+optimizer = { name = "adam", lr = 1e-4, momentum = 0.9, weight_decay = 0.0005 }
+schedule = { kind = "linear", final_factor = 0.01 }
+warmup = { epochs = 3.0, iterations = 100, start_factor = 0.0, bias_start_lr = 0.1, start_momentum = 0.8 }

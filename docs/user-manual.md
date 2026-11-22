@@ -9,12 +9,11 @@ You need [uv](https://docs.astral.sh/uv/) and, for training, an NVIDIA GPU with 
 driver. From the repository root:
 
 ```bash
-uv sync --extra cu132 --extra vit --extra yolo   # GPU machine
-uv sync --extra cpu --extra vit --extra yolo     # CPU only, for tests and small runs
+uv sync --extra cu132   # GPU machine
+uv sync --extra cpu     # CPU only, for tests and small runs
 ```
 
 - `cu132` or `cpu` picks the PyTorch wheels. Pick exactly one.
-- `vit` adds what the Swin and DeiT models need; `yolo` adds what the YOLO models need.
 
 `uv run` re-syncs the environment without extras before it runs a command, which would swap the
 PyTorch build. Run commands with `uv run --no-sync`, or activate the environment once with
@@ -44,6 +43,7 @@ weights/                        pretrained detectors (below)
 | PSAQ classifier | `weights/swin_tiny_patch4_window7_224.pth` | [Swin release](https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_tiny_patch4_window7_224.pth) |
 
 | `yolo11n` to `yolo11x` | `weights/yolo11s.pt` (converted, below) | [Ultralytics](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt) |
+| `yolov5n` to `yolov5x` | `weights/yolov5s.pt` (converted, below) | [YOLOv5 v7.0](https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt) |
 
 MMDetection-format checkpoints load directly; the converter renames their keys on loading.
 
@@ -51,6 +51,7 @@ Ultralytics checkpoints pickle whole modules. Convert each once into a plain sta
 
 ```bash
 uv run --no-sync python scripts/convert_checkpoint.py yolo11s.pt weights/yolo11s.pt
+uv run --no-sync python scripts/convert_checkpoint.py --yolov5 yolov5s.pt weights/yolov5s.pt
 ```
 
 ## How the scripts work
@@ -92,8 +93,10 @@ uv run --no-sync python scripts/generate.py configs/resnet50/generate.toml
 | `configs/swin_t/generate.toml`, `configs/swin_s/generate.toml` | Real labels; detection loss, attention entropy, TV |
 | `configs/yolo11s/generate_one_box.toml` | One random box per image at 160 x 160, with adaptive box sampling |
 | `configs/yolo11s/generate.toml` | The boxes that `generate_one_box` ended with, at 640 x 640 |
+| `configs/yolov5s/generate_one_box.toml`, `generate.toml` | The same two steps for YOLOv5s |
 
-The YOLO method runs Stage I in two steps: `labels.py configs/labels/one_box.toml`, then
+YOLOv5 scales its objectness loss by the image size, so its generation configs set
+`model.image_size` to the generated size. The YOLO method runs Stage I in two steps: `labels.py configs/labels/one_box.toml`, then
 `generate_one_box.toml`, whose `labels.jsonl` feeds `generate.toml`.
 
 It generates `count` images of `size` from the label set, `batch_size` at a time, and writes a
@@ -147,6 +150,7 @@ uv run --no-sync torchrun --nproc-per-node 8 scripts/qat.py configs/resnet50/qat
 
 | `configs/yolo11s/qat_ours.toml` | The method on YOLO11s |
 | `configs/yolo11s/qat_real_2k.toml`, `qat_real_full.toml` | Baselines: 2% and all of COCO train2017 |
+| `configs/yolov5s/qat_ours.toml`, `qat_real_full.toml` | The method and the full-data baseline on YOLOv5s |
 
 The YOLO real-data baselines letterbox and flip; the old Ultralytics trainer also used mosaic,
 perspective and colour augmentation, which dfq does not implement yet.

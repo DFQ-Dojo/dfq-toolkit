@@ -10,23 +10,12 @@ dependencies = [
     "pillow>=12.0",
     "pycocotools>=2.0.11",
     "pydantic>=2.14",
+    "pyyaml>=6.0",
     "torch>=2.15",
     "torchvision>=0.29",
-    "tqdm>=4.67",
 ]
 
 [project.optional-dependencies]
-# YOLOv5 and YOLO11. Ultralytics and YOLOv5 are vendored under src/dfq/vendor/; these are their
-# third-party needs.
-yolo = [
-    "opencv-python-headless>=4.12",
-    "pandas>=2.3",
-    "pyyaml>=6.0",
-]
-# Swin and DeiT Mask R-CNN, and the PSAQ-ViT baseline. The timm layers they use are vendored.
-vit = [
-    "scipy>=1.18",
-]
 # Pick one wheel source for PyTorch: `uv sync --extra cpu` or `uv sync --extra cu132`.
 cpu = ["torch>=2.15", "torchvision>=0.29"]
 cu132 = ["torch>=2.15", "torchvision>=0.29"]
@@ -69,8 +58,6 @@ explicit = true
 
 [tool.ruff]
 line-length = 100
-# The old YOLOv5 project, deleted when its replacement lands in src/dfq.
-extend-exclude = ["yolov5"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -82,11 +69,10 @@ explicit_package_bases = true
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["torchvision.*", "pycocotools.*", "scipy.*", "cv2.*", "yaml.*", "pandas.*"]
+module = ["torchvision.*", "pycocotools.*", "yaml.*"]
 ignore_missing_imports = true
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
 include = ["src", "tests", "scripts"]
-exclude = ["yolov5"]

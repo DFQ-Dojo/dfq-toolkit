@@ -17,7 +17,7 @@ quant/        fake quantizers (LSQ, LSQ+), quantized Conv2d and Linear, the quan
     synthesis/  image priors, augmentation, adaptive box sampling, the generation loop
     training/   the quantization-aware training loop, optimizer schedule, weight average
   models/       detector adapters; each implements Detector
-vendor/         Ultralytics (and later YOLOv5) code that the YOLO adapters use, rewritten to dfq's style
+vendor/         Ultralytics and YOLOv5 code that the YOLO adapters use, rewritten to dfq's style
 recipes/        connect adapters to the pipelines; only scripts import it
 baselines/      PSAQ-ViT
 scripts/        one thin script per stage
@@ -180,10 +180,12 @@ An adapter wraps a network and implements `Detector`.
 - `yolo/yolo11.py`: `YoloDetector` on the vendored Ultralytics `DetectionModel`. `losses` packs
   targets into Ultralytics' batch format; `predict` runs NMS (confidence 0.001, IoU 0.7).
   Quantization keeps the first convolution and the head in float. `logit_layer` is the head.
+- `yolo/yolov5.py`: `Yolov5Detector` on the vendored YOLOv5 `DetectionModel`. It scales the loss
+  gains by the number of levels, classes and `image_size`, as YOLOv5 does; NMS uses IoU 0.6.
 - `yolo/checkpoints.py`: a restricted unpickler that reads Ultralytics checkpoints into the
-  vendored classes (`MODULE_PATHS`) and refuses any other class outside a short allow-list.
+  vendored classes (`MODULE_PATHS`, `YOLOV5_PATHS`) and refuses any other class outside a short allow-list.
 
-`vendor/ultralytics/README.md` lists what is vendored and from where. Class and attribute names
+`vendor/ultralytics/README.md` and `vendor/yolov5/README.md` list what is vendored and from where. Class and attribute names
 stay as upstream, because checkpoints name them.
 
 ## Baselines (`baselines/`)
@@ -203,7 +205,7 @@ its record. A script parses `config.toml [key=value ...]`, loads the record, and
 ```text
 labels.py    LabelsConfig    -> label set (JSON Lines)
 psaq.py      PsaqConfig      -> synthetic set (PSAQ-ViT baseline)
-convert_checkpoint.py        -> plain checkpoint from a pickled Ultralytics one
+convert_checkpoint.py        -> plain checkpoint from a pickled Ultralytics or YOLOv5 one
 generate.py  GenerateConfig  -> synthetic set
 qat.py       QatConfig       -> best.pt, last.pt, epochs.jsonl, result.json
 evaluate.py  EvaluateConfig  -> COCO mAP

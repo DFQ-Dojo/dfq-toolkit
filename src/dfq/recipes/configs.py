@@ -23,6 +23,11 @@ class Family(StrEnum):
     YOLO11M = "yolo11m"
     YOLO11L = "yolo11l"
     YOLO11X = "yolo11x"
+    YOLOV5N = "yolov5n"
+    YOLOV5S = "yolov5s"
+    YOLOV5M = "yolov5m"
+    YOLOV5L = "yolov5l"
+    YOLOV5X = "yolov5x"
 
 
 class Record(BaseModel):
@@ -30,8 +35,11 @@ class Record(BaseModel):
 
 
 class ModelConfig(Record):
+    """A detector family and its weights. `image_size` scales YOLOv5's objectness loss."""
+
     family: Family
     weights: Path
+    image_size: int = 640
 
 
 class CocoData(Record):
