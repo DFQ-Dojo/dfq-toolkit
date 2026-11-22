@@ -1,7 +1,8 @@
 """Read Ultralytics and YOLOv5 checkpoints, which pickle whole modules, into vendored classes.
 
 A pickled module names its class by import path, such as `ultralytics.nn.modules.block.C3k2`.
-`load_pickled` resolves those paths in `dfq.vendor` instead, through `MODULE_PATHS`. It refuses
+`load_pickled` resolves those paths in `dfq.vendor` instead, through `MODULE_PATHS` (Ultralytics)
+or `YOLOV5_PATHS` (YOLOv5). It refuses
 every other class except PyTorch's, a few containers and NumPy's array rebuilders, so loading a
 checkpoint cannot run arbitrary code. `scripts/convert_checkpoint.py` then saves the model as a
 plain state dict and its model YAML.
@@ -20,6 +21,11 @@ MODULE_PATHS = {
     "ultralytics.nn.modules.conv": "dfq.vendor.ultralytics.nn.modules.conv",
     "ultralytics.nn.modules.block": "dfq.vendor.ultralytics.nn.modules.block",
     "ultralytics.nn.modules.head": "dfq.vendor.ultralytics.nn.modules.head",
+}
+
+YOLOV5_PATHS = {
+    "models.yolo": "dfq.vendor.yolov5.yolo",
+    "models.common": "dfq.vendor.yolov5.common",
 }
 
 SAFE = {
