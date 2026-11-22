@@ -1,0 +1,405 @@
+{
+  "description": "The 80 COCO object classes. index is the contiguous class index that dfq uses everywhere; coco_id is the category id in COCO annotation files and in torchvision's 91-way heads.",
+  "classes": [
+    {
+      "index": 0,
+      "coco_id": 1,
+      "name": "person"
+    },
+    {
+      "index": 1,
+      "coco_id": 2,
+      "name": "bicycle"
+    },
+    {
+      "index": 2,
+      "coco_id": 3,
+      "name": "car"
+    },
+    {
+      "index": 3,
+      "coco_id": 4,
+      "name": "motorcycle"
+    },
+    {
+      "index": 4,
+      "coco_id": 5,
+      "name": "airplane"
+    },
+    {
+      "index": 5,
+      "coco_id": 6,
+      "name": "bus"
+    },
+    {
+      "index": 6,
+      "coco_id": 7,
+      "name": "train"
+    },
+    {
+      "index": 7,
+      "coco_id": 8,
+      "name": "truck"
+    },
+    {
+      "index": 8,
+      "coco_id": 9,
+      "name": "boat"
+    },
+    {
+      "index": 9,
+      "coco_id": 10,
+      "name": "traffic light"
+    },
+    {
+      "index": 10,
+      "coco_id": 11,
+      "name": "fire hydrant"
+    },
+    {
+      "index": 11,
+      "coco_id": 13,
+      "name": "stop sign"
+    },
+    {
+      "index": 12,
+      "coco_id": 14,
+      "name": "parking meter"
+    },
+    {
+      "index": 13,
+      "coco_id": 15,
+      "name": "bench"
+    },
+    {
+      "index": 14,
+      "coco_id": 16,
+      "name": "bird"
+    },
+    {
+      "index": 15,
+      "coco_id": 17,
+      "name": "cat"
+    },
+    {
+      "index": 16,
+      "coco_id": 18,
+      "name": "dog"
+    },
+    {
+      "index": 17,
+      "coco_id": 19,
+      "name": "horse"
+    },
+    {
+      "index": 18,
+      "coco_id": 20,
+      "name": "sheep"
+    },
+    {
+      "index": 19,
+      "coco_id": 21,
+      "name": "cow"
+    },
+    {
+      "index": 20,
+      "coco_id": 22,
+      "name": "elephant"
+    },
+    {
+      "index": 21,
+      "coco_id": 23,
+      "name": "bear"
+    },
+    {
+      "index": 22,
+      "coco_id": 24,
+      "name": "zebra"
+    },
+    {
+      "index": 23,
+      "coco_id": 25,
+      "name": "giraffe"
+    },
+    {
+      "index": 24,
+      "coco_id": 27,
+      "name": "backpack"
+    },
+    {
+      "index": 25,
+      "coco_id": 28,
+      "name": "umbrella"
+    },
+    {
+      "index": 26,
+      "coco_id": 31,
+      "name": "handbag"
+    },
+    {
+      "index": 27,
+      "coco_id": 32,
+      "name": "tie"
+    },
+    {
+      "index": 28,
+      "coco_id": 33,
+      "name": "suitcase"
+    },
+    {
+      "index": 29,
+      "coco_id": 34,
+      "name": "frisbee"
+    },
+    {
+      "index": 30,
+      "coco_id": 35,
+      "name": "skis"
+    },
+    {
+      "index": 31,
+      "coco_id": 36,
+      "name": "snowboard"
+    },
+    {
+      "index": 32,
+      "coco_id": 37,
+      "name": "sports ball"
+    },
+    {
+      "index": 33,
+      "coco_id": 38,
+      "name": "kite"
+    },
+    {
+      "index": 34,
+      "coco_id": 39,
+      "name": "baseball bat"
+    },
+    {
+      "index": 35,
+      "coco_id": 40,
+      "name": "baseball glove"
+    },
+    {
+      "index": 36,
+      "coco_id": 41,
+      "name": "skateboard"
+    },
+    {
+      "index": 37,
+      "coco_id": 42,
+      "name": "surfboard"
+    },
+    {
+      "index": 38,
+      "coco_id": 43,
+      "name": "tennis racket"
+    },
+    {
+      "index": 39,
+      "coco_id": 44,
+      "name": "bottle"
+    },
+    {
+      "index": 40,
+      "coco_id": 46,
+      "name": "wine glass"
+    },
+    {
+      "index": 41,
+      "coco_id": 47,
+      "name": "cup"
+    },
+    {
+      "index": 42,
+      "coco_id": 48,
+      "name": "fork"
+    },
+    {
+      "index": 43,
+      "coco_id": 49,
+      "name": "knife"
+    },
+    {
+      "index": 44,
+      "coco_id": 50,
+      "name": "spoon"
+    },
+    {
+      "index": 45,
+      "coco_id": 51,
+      "name": "bowl"
+    },
+    {
+      "index": 46,
+      "coco_id": 52,
+      "name": "banana"
+    },
+    {
+      "index": 47,
+      "coco_id": 53,
+      "name": "apple"
+    },
+    {
+      "index": 48,
+      "coco_id": 54,
+      "name": "sandwich"
+    },
+    {
+      "index": 49,
+      "coco_id": 55,
+      "name": "orange"
+    },
+    {
+      "index": 50,
+      "coco_id": 56,
+      "name": "broccoli"
+    },
+    {
+      "index": 51,
+      "coco_id": 57,
+      "name": "carrot"
+    },
+    {
+      "index": 52,
+      "coco_id": 58,
+      "name": "hot dog"
+    },
+    {
+      "index": 53,
+      "coco_id": 59,
+      "name": "pizza"
+    },
+    {
+      "index": 54,
+      "coco_id": 60,
+      "name": "donut"
+    },
+    {
+      "index": 55,
+      "coco_id": 61,
+      "name": "cake"
+    },
+    {
+      "index": 56,
+      "coco_id": 62,
+      "name": "chair"
+    },
+    {
+      "index": 57,
+      "coco_id": 63,
+      "name": "couch"
+    },
+    {
+      "index": 58,
+      "coco_id": 64,
+      "name": "potted plant"
+    },
+    {
+      "index": 59,
+      "coco_id": 65,
+      "name": "bed"
+    },
+    {
+      "index": 60,
+      "coco_id": 67,
+      "name": "dining table"
+    },
+    {
+      "index": 61,
+      "coco_id": 70,
+      "name": "toilet"
+    },
+    {
+      "index": 62,
+      "coco_id": 72,
+      "name": "tv"
+    },
+    {
+      "index": 63,
+      "coco_id": 73,
+      "name": "laptop"
+    },
+    {
+      "index": 64,
+      "coco_id": 74,
+      "name": "mouse"
+    },
+    {
+      "index": 65,
+      "coco_id": 75,
+      "name": "remote"
+    },
+    {
+      "index": 66,
+      "coco_id": 76,
+      "name": "keyboard"
+    },
+    {
+      "index": 67,
+      "coco_id": 77,
+      "name": "cell phone"
+    },
+    {
+      "index": 68,
+      "coco_id": 78,
+      "name": "microwave"
+    },
+    {
+      "index": 69,
+      "coco_id": 79,
+      "name": "oven"
+    },
+    {
+      "index": 70,
+      "coco_id": 80,
+      "name": "toaster"
+    },
+    {
+      "index": 71,
+      "coco_id": 81,
+      "name": "sink"
+    },
+    {
+      "index": 72,
+      "coco_id": 82,
+      "name": "refrigerator"
+    },
+    {
+      "index": 73,
+      "coco_id": 84,
+      "name": "book"
+    },
+    {
+      "index": 74,
+      "coco_id": 85,
+      "name": "clock"
+    },
+    {
+      "index": 75,
+      "coco_id": 86,
+      "name": "vase"
+    },
+    {
+      "index": 76,
+      "coco_id": 87,
+      "name": "scissors"
+    },
+    {
+      "index": 77,
+      "coco_id": 88,
+      "name": "teddy bear"
+    },
+    {
+      "index": 78,
+      "coco_id": 89,
+      "name": "hair drier"
+    },
+    {
+      "index": 79,
+      "coco_id": 90,
+      "name": "toothbrush"
+    }
+  ]
+}
